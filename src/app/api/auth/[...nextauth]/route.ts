@@ -9,6 +9,18 @@ export const authOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     }),
   ],
+  callbacks: {
+    jwt: async ({ token, profile }) => {
+      if(profile) {
+        token.sub = profile.sub;
+      }
+      return token;
+    },
+    session: async ({ session, token, }) => {
+      session.user.id = token.sub;
+      return session;
+    }
+  },
 } satisfies AuthOptions;
 
 export const handler = NextAuth(authOptions);
