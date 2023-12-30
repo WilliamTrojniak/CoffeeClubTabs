@@ -1,6 +1,5 @@
-import { boolean, date, pgEnum, pgTable, primaryKey, serial, text, time, varchar } from "drizzle-orm/pg-core";
+import { boolean, date, pgEnum, pgTable, primaryKey, serial, smallint, text, time, varchar } from "drizzle-orm/pg-core";
 import { users } from "./users";
-import { smallint } from "drizzle-orm/mysql-core";
 import { paymentOptions, shops } from "./shops";
 
 export const daysOfWeekEnum = pgEnum('days_of_week', 
