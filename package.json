@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "migration:generate": "drizzle-kit generate:pg --schema=./src/db/",
-    "migration:push": "node -r esbuild-register src/db/migrate.ts",
-    "migrate": "drizzle-kit generate:pg --schema=./src/db/ && node -r esbuild-register src/db/migrate.ts"
+    "migration:push": "node -r esbuild-register src/db/migrate.ts"
   },
   "dependencies": {
     "@planetscale/database": "^1.13.0",
