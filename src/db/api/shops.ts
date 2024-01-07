@@ -19,7 +19,7 @@ export async function queryUserShops(userId: string) {
   return result;
 }
 
-export async function queryShopId(id: number) {
+export async function queryShopById(id: number) {
   const result = await db.select().from(shops).where(eq(shops.id, id));
   if (result.length === 0) return null;
   return result[0];
