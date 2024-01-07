@@ -17,12 +17,8 @@ export default function ShopCreateForm() {
     resolver: zodResolver(shopInsertSchema),
   });
 
-  async function onSubmit(data: ShopInsert) {
-    createShop(data); 
-  }
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>  
+    <form onSubmit={handleSubmit(async (data) => console.log(await createShop(data)))}>  
       <input type="hidden" {...register("ownerId")}/>
       <label>
         Shop Name
