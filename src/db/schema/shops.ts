@@ -2,6 +2,8 @@ import { integer, pgTable, serial, text, unique, varchar } from "drizzle-orm/pg-
 import { users } from "./users";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
+import { itemCategories } from "./items";
 
 export const shops = pgTable('shops', {
   id: serial('id').primaryKey(),
@@ -13,6 +15,17 @@ export const shops = pgTable('shops', {
     }
 });
 
+export const shopsRelations = relations(shops, ({one, many}) => {
+  return {
+    owner: one(users, {
+      fields: [shops.ownerId],
+      references: [users.id],
+    }),
+    itemCategories: many(itemCategories),
+    paymentOptions: many(paymentOptions),
+  }
+});
+
 export const paymentOptions = pgTable('payment_options', {
   id: serial('id').primaryKey(),
   shopId: integer('shop_id').references(() => shops.id).notNull(),
@@ -21,6 +34,15 @@ export const paymentOptions = pgTable('payment_options', {
     return {
       unq: unique().on(table.shopId, table.name), // Shops payment option name must be unique to the shop
     }
+});
+
+export const paymentOptionsRelations = relations(paymentOptions, ({one}) => {
+  return {
+    shop: one(shops, {
+      fields: [paymentOptions.shopId],
+      references: [shops.id]
+    }),
+  }
 });
 
 export const shopInsertSchema = createInsertSchema(shops);

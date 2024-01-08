@@ -87,9 +87,10 @@ export async function getShopDetails(shopId: number) {
   try {
     const shopData = await queryShopDetails(parsed.data);
     if (!shopData) return notFoundResponse();
-    if (shopData.shop_data.ownerId !== session.user.id) return unauthorizedResponse();
+    if (shopData.ownerId !== session.user.id) return unauthorizedResponse();
     return generalClientSuccess(200, shopData);
-  } catch {
+  } catch (error) {
+    console.log(error);
     return internalServerErrorReponse();
   }
 }

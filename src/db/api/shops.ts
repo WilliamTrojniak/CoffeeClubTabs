@@ -29,14 +29,11 @@ export const queryShopById = cache(async (id: number) => {
 });
 
 export const queryShopDetails = cache(async (id: number) => {
-  const rows = await db.select().from(shops).leftJoin(paymentOptions, eq(shops.id, paymentOptions.shopId)).leftJoin(itemCategories, eq(shops.id, itemCategories.shopId)).where(eq(shops.id, id));
 
-  if(rows.length === 0) return null;
-  const result = rows.reduce<{shop_data: Shop, item_categories: ItemCategory[], payment_options: ShopPaymentOption[]}>((prev, row) => {
-    if (row.item_categories) prev.item_categories.push(row.item_categories);
-    if (row.payment_options) prev.payment_options.push(row.payment_options);
-    return prev;
-  }, {shop_data: rows[0].shops, item_categories: [], payment_options: []});
+  const result = await db.query.shops.findFirst({
+    with: {itemCategories: true, paymentOptions: true},
+    where: eq(shops.id, id),
+  });
 
   return result;
 });
