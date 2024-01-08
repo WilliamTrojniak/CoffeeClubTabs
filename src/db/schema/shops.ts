@@ -45,14 +45,18 @@ export const paymentOptionsRelations = relations(paymentOptions, ({one}) => {
   }
 });
 
-export const shopInsertSchema = createInsertSchema(shops);
+export const shopInsertSchema = createInsertSchema(shops, {
+  name: z.string().nonempty().max(255),
+});
 export type ShopInsert = z.infer<typeof shopInsertSchema>;
 
 export const shopSelectSchema = createSelectSchema(shops);
 export type Shop = z.infer<typeof shopSelectSchema>;
 
 
-export const shopPaymentOptionInsertSchema = createInsertSchema(paymentOptions);
+export const shopPaymentOptionInsertSchema = createInsertSchema(paymentOptions, {
+  name: z.string().nonempty().max(255),
+});
 export type ShopPaymentOptionInsertData = z.infer<typeof shopPaymentOptionInsertSchema>;
 
 export const shopPaymentOptionSelectSchema = createSelectSchema(paymentOptions);

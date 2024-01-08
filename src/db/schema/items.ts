@@ -89,13 +89,23 @@ export const itemAddons = pgTable('item_addons', {
 });
 
 
-export const itemCategoriesInsertSchema = createInsertSchema(itemCategories);
+export const itemCategoriesInsertSchema = createInsertSchema(itemCategories, {
+    name: z.string().nonempty().max(127),
+});
 export type ItemCategoriesInsert = z.infer<typeof itemCategoriesInsertSchema>;
 
 export const itemCategorySchema = createSelectSchema(itemCategories);
 export type ItemCategory = z.infer<typeof itemCategorySchema>;
 
 
+export const itemInsertSchema = createInsertSchema(items, {
+  name: z.string().nonempty("Must not be empty").max(127),
+  basePrice: z.number().nonnegative()
+});
+export type ItemInsert = z.infer<typeof itemInsertSchema>;
+
+export const itemSchema = createSelectSchema(items);
+export type Item = z.infer<typeof itemSchema>;
 
 
 
