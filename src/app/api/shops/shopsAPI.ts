@@ -2,10 +2,11 @@
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { Shop, ShopInsert, ShopPaymentOptionInsertData, shopInsertSchema, shopPaymentOptionInsertSchema } from "@/db/schema/shops";
-import { insertPaymentOption, insertShop, queryShopById, queryUserShops, removeShop } from "@/db/api/shops";
+import { Shop, ShopInsert, ShopPaymentOptionInsertData, shopInsertSchema, shopPaymentOptionInsertSchema, shopSelectSchema } from "@/db/schema/shops";
+import { insertPaymentOption, insertShop, queryShopById, queryShopDetails, queryUserShops, removeShop } from "@/db/api/shops";
 import { Response, clientFormattingErrorResponse, dataConflictResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "@/app/api/responses";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 export async function createShop(data: ShopInsert): Promise<Response<Shop>> {
   
@@ -69,6 +70,25 @@ export async function getShopById(shopId: number) {
     const result = await queryShopById(shopId);
     if (!result) return notFoundResponse();
     return generalClientSuccess(200, result);
+  } catch {
+    return internalServerErrorReponse();
+  }
+}
+
+export async function getShopDetails(shopId: number) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user.id)
+    return unauthenticatedResponse();
+
+  const parsed = z.number().int().safeParse(shopId);
+  if (!parsed.success) return clientFormattingErrorResponse(parsed.error.format()); 
+  
+
+  try {
+    const shopData = await queryShopDetails(parsed.data);
+    if (!shopData) return notFoundResponse();
+    if (shopData.shop_data.ownerId !== session.user.id) return unauthorizedResponse();
+    return generalClientSuccess(200, shopData);
   } catch {
     return internalServerErrorReponse();
   }
