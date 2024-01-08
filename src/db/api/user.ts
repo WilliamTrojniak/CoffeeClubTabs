@@ -3,6 +3,8 @@
 import { eq } from "drizzle-orm";
 import { users } from "../schema/users";
 import { db } from "./database";
+import { cache } from "react";
+import 'server-only'
 
 // Create a user entry with a unique id
 // Update user values if the user already exists
@@ -17,9 +19,9 @@ export async function createUser(id: string, name?: string, email?: string) {
 
 // Get user data for user with id
 // Returns null if no user with id exists
-export async function getUser(id: string) {
+export const getUser = cache(async (id: string) => {
   const result = await db.select().from(users).where(eq(users.id, id));
   
   if (result.length === 0) return null;
   return result[0];
-}
+});

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, unique, varchar } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, text, unique, varchar } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -15,7 +15,7 @@ export const shops = pgTable('shops', {
 
 export const paymentOptions = pgTable('payment_options', {
   id: serial('id').primaryKey(),
-  shopId: serial('shop_id').references(() => shops.id).notNull(),
+  shopId: integer('shop_id').references(() => shops.id).notNull(),
   name: varchar('name', {length: 255}).notNull(),
 }, table => {
     return {
@@ -28,3 +28,10 @@ export type ShopInsert = z.infer<typeof shopInsertSchema>;
 
 export const shopSelectSchema = createSelectSchema(shops);
 export type Shop = z.infer<typeof shopSelectSchema>;
+
+
+export const shopPaymentOptionInsertSchema = createInsertSchema(paymentOptions);
+export type ShopPaymentOptionInsertData = z.infer<typeof shopPaymentOptionInsertSchema>;
+
+export const shopPaymentOptionSelectSchema = createSelectSchema(paymentOptions);
+export type ShopPaymentOption = z.infer<typeof shopPaymentOptionSelectSchema>;

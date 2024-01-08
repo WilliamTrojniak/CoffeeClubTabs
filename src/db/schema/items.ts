@@ -1,5 +1,7 @@
 import { pgTable, primaryKey, real, serial, unique, varchar } from "drizzle-orm/pg-core";
 import { shops } from "./shops";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { z } from "zod";
 
 export const itemCategories = pgTable('item_categories', {
   id: serial('id').primaryKey(),
@@ -75,3 +77,17 @@ export const itemAddons = pgTable('item_addons', {
       pk: primaryKey({columns: [table.parentItemId, table.addonItemId]})
     }
 });
+
+
+export const itemCategoriesInsertSchema = createInsertSchema(itemCategories);
+export type ItemCategoriesInsert = z.infer<typeof itemCategoriesInsertSchema>;
+
+export const itemCategorySchema = createSelectSchema(itemCategories);
+export type ItemCategory = z.infer<typeof itemCategorySchema>;
+
+
+
+
+
+
+
