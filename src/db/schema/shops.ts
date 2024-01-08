@@ -3,7 +3,7 @@ import { users } from "./users";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
-import { itemCategories } from "./items";
+import { itemCategories, itemVariantCategories } from "./items";
 
 export const shops = pgTable('shops', {
   id: serial('id').primaryKey(),
@@ -22,6 +22,7 @@ export const shopsRelations = relations(shops, ({one, many}) => {
       references: [users.id],
     }),
     itemCategories: many(itemCategories),
+    itemVariantCategories: many(itemVariantCategories),
     paymentOptions: many(paymentOptions),
   }
 });

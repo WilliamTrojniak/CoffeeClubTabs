@@ -1,9 +1,8 @@
 import { asc, eq } from "drizzle-orm";
-import { Shop, ShopInsert, ShopPaymentOption, ShopPaymentOptionInsertData, paymentOptions, shops } from "../schema/shops";
+import { ShopInsert, ShopPaymentOptionInsertData, paymentOptions, shops } from "../schema/shops";
 import { db } from "./database";
 import { cache } from "react";
 import 'server-only'
-import { ItemCategory, itemCategories } from "../schema/items";
 
 export async function insertShop(data: ShopInsert) {
   const result = await db.insert(shops).values({ownerId: data.ownerId, name: data.name}).onConflictDoNothing().returning();
@@ -31,7 +30,7 @@ export const queryShopById = cache(async (id: number) => {
 export const queryShopDetails = cache(async (id: number) => {
 
   const result = await db.query.shops.findFirst({
-    with: {itemCategories: true, paymentOptions: true},
+    with: {itemCategories: true, itemVariantCategories: true, paymentOptions: true},
     where: eq(shops.id, id),
   });
 

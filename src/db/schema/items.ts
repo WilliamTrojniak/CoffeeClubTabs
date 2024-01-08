@@ -14,12 +14,13 @@ export const itemCategories = pgTable('item_categories', {
     }
 });
 
-export const itemCategoriesRelations = relations(itemCategories, ({one}) => {
+export const itemCategoriesRelations = relations(itemCategories, ({one, many}) => {
   return {
     shops: one(shops, {
       fields: [itemCategories.shopId],
       references: [shops.id]
     }),
+    items: many(itemToCategories),
   };
 });
 
@@ -32,6 +33,15 @@ export const items = pgTable('items', {
     return {
       unq: unique().on(table.shopId, table.name), // Items within a shop must be uniquely named
     }
+});
+
+export const itemsRelations = relations(items, ({many}) => {
+  return {
+    categories: many(itemToCategories),
+    variants: many(itemVariants),
+    options: many(itemOptions),
+    addons: many(itemAddons),
+  }
 });
 
 // Many to many table
@@ -47,6 +57,19 @@ export const itemToCategories = pgTable('items_to_categories', {
     }
 });
 
+export const itemToCategoriesRelations = relations(itemToCategories, ({one}) => {
+  return {
+    item: one(items, {
+      fields: [itemToCategories.itemId],
+      references: [items.id]
+    }),
+    category: one(itemCategories, {
+      fields: [itemToCategories.itemCategoryId],
+      references: [itemCategories.id],
+    }),
+  }
+});
+
 export const itemVariantCategories = pgTable('item_variant_categories', {
   id: serial('id').primaryKey(),
   shopId: integer('shop_id').references(() => shops.id).notNull(),
@@ -55,6 +78,16 @@ export const itemVariantCategories = pgTable('item_variant_categories', {
     return {
       unq: unique().on(table.shopId, table.name),
     }
+});
+
+export const itemVariantCategoriesRelations = relations(itemVariantCategories, ({one, many}) => {
+  return {
+    shop: one(shops, {
+      fields: [itemVariantCategories.shopId],
+      references: [shops.id],
+    }),
+    variants: many(itemVariants)
+  }
 });
 
 export const itemVariants = pgTable('item_variants', {
@@ -69,6 +102,19 @@ export const itemVariants = pgTable('item_variants', {
     }
 });
 
+export const itemVariantsRelations = relations(itemVariants, ({one}) => {
+  return {
+    item: one(items, {
+      fields: [itemVariants.itemId],
+      references: [items.id],
+    }),
+    category: one(itemVariantCategories, {
+      fields: [itemVariants.category],
+      references: [itemVariantCategories.id]
+    })
+  }
+});
+
 export const itemOptions = pgTable('item_options', {
   parentItemId: integer('parent_item_id').references(() => items.id),
   optionItemId: integer('option_item_id').references(() => items.id),
@@ -79,6 +125,19 @@ export const itemOptions = pgTable('item_options', {
     }
 });
 
+export const itemOptionsRelations = relations(itemOptions, ({one}) => {
+  return {
+    parentItem: one(items, {
+      fields: [itemOptions.parentItemId],
+      references: [items.id]
+    }),
+    optionItem: one(items, {
+      fields: [itemOptions.optionItemId],
+      references: [items.id]
+    }),
+  }
+});
+
 export const itemAddons = pgTable('item_addons', {
   parentItemId: integer('parent_item_id').references(() => items.id),
   addonItemId: integer('addon_item_id').references(() => items.id),
@@ -86,6 +145,19 @@ export const itemAddons = pgTable('item_addons', {
     return {
       pk: primaryKey({columns: [table.parentItemId, table.addonItemId]})
     }
+});
+
+export const itemAddonsRelations = relations(itemAddons, ({one}) => {
+  return {
+    parentItem: one(items, {
+      fields: [itemAddons.parentItemId],
+      references: [items.id]
+    }),
+    addonItem: one(items, {
+      fields: [itemAddons.addonItemId],
+      references: [items.id]
+    }),
+  }
 });
 
 
