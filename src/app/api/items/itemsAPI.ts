@@ -2,63 +2,22 @@
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { revalidatePath } from "next/cache";
-import { Item, ItemCategoriesInsert, ItemCategory, ItemInsert, itemCategoriesInsertSchema, itemInsertSchema } from "@/db/schema/items";
-import { Response, clientFormattingErrorResponse, dataConflictResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "../responses";
-import { queryShopById } from "@/db/api/shops";
-import { insertItem, insertItemCategory, queryItemsByShop } from "@/db/api/items";
+import { Item, ItemCategoriesInsert, ItemInsert, ItemVariantCategoryInsert, itemCategoriesInsertSchema, itemInsertSchema, itemVariantCategoryInsertSchema } from "@/db/schema/items";
+import { Response, clientFormattingErrorResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "../responses";
+import { insertItem, insertItemCategory, insertItemVariantCategory, queryItemById, queryItemsByShop } from "@/db/api/items";
 import { z } from "zod";
-
-export async function createItemCategory(data: ItemCategoriesInsert): Promise<Response<ItemCategory>> {
-  
-  const session = await getServerSession(authOptions);
-  if (!session?.user.id)
-    return unauthenticatedResponse();
-
-  const parsed = itemCategoriesInsertSchema.safeParse(data);
-  
-  if (!parsed.success) 
-    return clientFormattingErrorResponse(parsed.error.format());
-
-  try {
-    const shopData = await queryShopById(parsed.data.shopId);
-    if(!shopData) return notFoundResponse();
-    if(shopData.ownerId !== session.user.id) return unauthorizedResponse();
-    
-    const result = await insertItemCategory(parsed.data)
-    if(!result) return dataConflictResponse();
-    revalidatePath(`/shops/${parsed.data.shopId}`)
-    return generalClientSuccess(201, result);
-  } catch (e) {
-    console.error(e);
-    return internalServerErrorReponse();
-  }
-}
+import { modifyShop } from "../shops/shopsAPI";
 
 export async function createItem(data: ItemInsert): Promise<Response<Item>> {
-  const session = await getServerSession(authOptions);
-  if(!session?.user.id)
-    return unauthenticatedResponse();
-  
+
   const parsed = itemInsertSchema.safeParse(data);
 
   if(!parsed.success)
     return clientFormattingErrorResponse(parsed.error.format());
-
-  try {
-    const shopData = await queryShopById(parsed.data.shopId);
-    if(!shopData) return notFoundResponse();
-    if(shopData.ownerId !== session.user.id) return unauthorizedResponse();
-
-    const result = await insertItem(parsed.data);
-    if(!result) return dataConflictResponse();
-    revalidatePath(`/shops/${parsed.data.shopId}`)
-    return generalClientSuccess(201, result)
-  } catch (e) {
-    console.error(e);
-    return internalServerErrorReponse();
-  }
+  
+  return modifyShop(parsed.data.shopId, () => insertItem(parsed.data));
 }
+
 
 export async function getItemsByShop(shopId: number): Promise<Response<Item[]>> {
   const session = await getServerSession(authOptions);
@@ -71,9 +30,56 @@ export async function getItemsByShop(shopId: number): Promise<Response<Item[]>> 
 
   try {
     const result = await queryItemsByShop(parsed.data);
-    return generalClientSuccess(200, result);
+    return generalClientSuccess(result);
   } catch (e) {
     console.error(e);
     return internalServerErrorReponse();
   }
+}
+
+
+export async function createItemCategory(data: ItemCategoriesInsert) {
+  
+  const parsed = itemCategoriesInsertSchema.safeParse(data);
+  
+  if (!parsed.success) 
+    return clientFormattingErrorResponse(parsed.error.format());
+
+  return modifyShop(parsed.data.shopId, () => insertItemCategory(parsed.data));
+
+}
+
+
+export async function createItemVariantCategory(data: ItemVariantCategoryInsert) {
+
+  const parsed = itemVariantCategoryInsertSchema.safeParse(data);
+
+  if (!parsed.success)
+    return clientFormattingErrorResponse(parsed.error.format());
+
+  // TODO Ammend
+  return modifyShop(parsed.data.shopId, () => insertItemVariantCategory(parsed.data));
+
+}
+
+export async function getItemById(itemId: number) {
+  const parsed = z.number().int().min(1).safeParse(itemId);
+
+  if (!parsed.success)
+    return notFoundResponse();
+
+  const session = await getServerSession(authOptions);
+  if(!session?.user.id) return unauthenticatedResponse();
+
+  try {
+    const result = await queryItemById(parsed.data);
+    if (result && result.shop.ownerId !== session.user.id)
+      return unauthorizedResponse();
+    if(!result) return notFoundResponse();
+    return generalClientSuccess(result);
+  } catch (e) {
+    console.log(e);
+    return internalServerErrorReponse();
+  }
+
 }

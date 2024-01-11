@@ -1,13 +1,11 @@
 'use client'
 
+import { createItem, createItemCategory } from "@/app/api/items/itemsAPI";
 import { ItemInsert, itemInsertSchema } from "@/db/schema/items";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useItemCreateFormContext } from "./ItemCreateForm";
 
-export default function ItemCreateVariantsForm({shopId}: {shopId: number}) {
-
-  const formContext = useItemCreateFormContext();
+export default function ItemCreateForm({shopId}: {shopId: number}) {
 
   const {register, handleSubmit, } = useForm<ItemInsert>({
     defaultValues: {
@@ -18,16 +16,11 @@ export default function ItemCreateVariantsForm({shopId}: {shopId: number}) {
     resolver: zodResolver(itemInsertSchema),
   });
 
-  if (!formContext) return <h1>Could not load form: No context provided</h1>;
-
   return (
-    <form noValidate onSubmit={handleSubmit((data) => { 
-      formContext.setItemCreateData(data);
-      formContext.nextStage();
-    })}>  
+    <form noValidate onSubmit={handleSubmit(async (data) => console.log(await createItem(data)))}>  
       <input type="hidden" {...register("shopId")}/>
       <label>
-        Item Variant Name
+        Item Name
         <input type="text" {...register("name")}/>
       </label>
       <label>
@@ -37,7 +30,6 @@ export default function ItemCreateVariantsForm({shopId}: {shopId: number}) {
         })}/>
       </label>
       <button>Submit</button>
-      <button onClick={formContext.prevStage}>Back</button>
     </form>
   );
 

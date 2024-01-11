@@ -4,17 +4,13 @@ import { ItemCategoriesInsert, ItemCategory, itemCategoriesInsertSchema } from "
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form"
 import { z } from "zod";
-import { useItemCreateFormContext } from "./ItemCreateForm";
-import { createFilter } from "react-select";
 import ReactSelectCreatable from "react-select/creatable";
 import { useCallback } from "react";
 
 
 export default function ItemCreateCategoryForm({shopId, categories}: {shopId: number, categories: ItemCategory[]}) {
   
-  const formContext = useItemCreateFormContext();
-
-  const {handleSubmit, control, register} = useForm<{categories: ItemCategoriesInsert[]}>({
+  const {handleSubmit, control} = useForm<{categories: ItemCategoriesInsert[]}>({
     defaultValues: {
       categories: [],
     },
@@ -26,12 +22,9 @@ export default function ItemCreateCategoryForm({shopId, categories}: {shopId: nu
     return {shopId, name: label} satisfies ItemCategoriesInsert;
   }, [shopId])
 
-  if (!formContext) return <h1>Could not load form: No context provided</h1>;
 
   return (
     <form onSubmit={handleSubmit((data) => {
-      formContext.setItemCategoryCreateData(data.categories);
-      formContext.nextStage();
     })}>
       <Controller
         name="categories"
@@ -40,18 +33,15 @@ export default function ItemCreateCategoryForm({shopId, categories}: {shopId: nu
         render={({field}) => <ReactSelectCreatable<ItemCategoriesInsert, true>
           {...field}
           isMulti
+          placeholder={"Add categories..."}
           options={categories}
+          noOptionsMessage={({inputValue}) => !inputValue ? "Add a category..." : `${inputValue} is already added!`}
           getOptionLabel={(option: ItemCategoriesInsert) => option.name }
           getOptionValue={(option: ItemCategoriesInsert) => option.name}
           getNewOptionData={createOption}
         />}
       />
+      <button>Save</button>
     </form>
   );
-
 }
-
-/*
-
-
-*/

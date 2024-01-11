@@ -2,7 +2,7 @@
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { Shop, ShopInsert, ShopPaymentOptionInsertData, shopInsertSchema, shopPaymentOptionInsertSchema, shopSelectSchema } from "@/db/schema/shops";
+import { Shop, ShopInsert, ShopPaymentOptionInsertData, shopInsertSchema, shopPaymentOptionInsertSchema } from "@/db/schema/shops";
 import { insertPaymentOption, insertShop, queryShopById, queryShopDetails, queryUserShops, removeShop } from "@/db/api/shops";
 import { Response, clientFormattingErrorResponse, dataConflictResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "@/app/api/responses";
 import { revalidatePath } from "next/cache";
@@ -28,7 +28,7 @@ export async function createShop(data: ShopInsert): Promise<Response<Shop>> {
       return dataConflictResponse(); 
 
     revalidatePath('/');
-    return generalClientSuccess(201, result); 
+    return generalClientSuccess(result); 
   } catch {
     return internalServerErrorReponse(); 
   }
@@ -50,7 +50,7 @@ export async function deleteShop(shopId: number): Promise<Response<Shop>> {
     const result = await removeShop(shopId);
     if (!result) return notFoundResponse();
     revalidatePath('/');
-    return generalClientSuccess(200, result);
+    return generalClientSuccess(result);
   } catch {
     return internalServerErrorReponse();
   }
@@ -59,7 +59,7 @@ export async function deleteShop(shopId: number): Promise<Response<Shop>> {
 export async function getUserShops(userId: string) {
   try {
     const result = await queryUserShops(userId);
-    return generalClientSuccess(200, result); 
+    return generalClientSuccess(result); 
   } catch {
     return internalServerErrorReponse(); 
   }
@@ -69,7 +69,7 @@ export async function getShopById(shopId: number) {
   try {
     const result = await queryShopById(shopId);
     if (!result) return notFoundResponse();
-    return generalClientSuccess(200, result);
+    return generalClientSuccess(result);
   } catch {
     return internalServerErrorReponse();
   }
@@ -88,35 +88,37 @@ export async function getShopDetails(shopId: number) {
     const shopData = await queryShopDetails(parsed.data);
     if (!shopData) return notFoundResponse();
     if (shopData.ownerId !== session.user.id) return unauthorizedResponse();
-    return generalClientSuccess(200, shopData);
+    return generalClientSuccess(shopData);
   } catch (error) {
     console.log(error);
     return internalServerErrorReponse();
   }
 }
 
-export async function createPaymentOption(data: ShopPaymentOptionInsertData) {
+export async function modifyShop<T>(shopId: number, modifyFunc: () => Promise<T | null>): Promise<Response<T>> {
   const session = await getServerSession(authOptions);
   if(!session?.user.id)
     return unauthenticatedResponse();
 
+  try {
+    const shopData = await queryShopById(shopId);
+    if(!shopData) return notFoundResponse();
+    if(shopData.ownerId !== session.user.id) return unauthorizedResponse();
+
+    const result = await modifyFunc();
+    if(!result) return dataConflictResponse();
+    revalidatePath(`/shops/${shopId}`)
+    return generalClientSuccess(result)
+  } catch (e) {
+    console.error(e);
+    return internalServerErrorReponse();
+  }
+}
+
+export async function createPaymentOption(data: ShopPaymentOptionInsertData) {
   const parsed = shopPaymentOptionInsertSchema.safeParse(data);
   if (!parsed.success)
     return clientFormattingErrorResponse(parsed.error.format());
-
-  try {
-    const shopData = await queryShopById(parsed.data.shopId);
-    if (!shopData)
-      return notFoundResponse();
-    
-    if (shopData.ownerId !== session.user.id)
-      return unauthorizedResponse();
-    
-    const result = await insertPaymentOption(parsed.data);
-    if (!result) return dataConflictResponse();
-    revalidatePath(`/shops/${parsed.data.shopId}`);
-    return result;
-  } catch {
-    return internalServerErrorReponse();
-  }
+  
+  return modifyShop(parsed.data.shopId, () => insertPaymentOption(parsed.data));
 }
