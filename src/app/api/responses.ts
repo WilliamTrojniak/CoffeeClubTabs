@@ -1,14 +1,15 @@
 import { ZodFormattedError } from "zod"
 
 type SuccessResponse<T> = {
-  status: 200 | 201,
+  status: 200,
   data: T,
   message?: string
 }
 
 type ClientFormattingErrorResponse<T> = {
   status: 400,
-  message: ZodFormattedError<T>
+  data: ZodFormattedError<T>
+  message: string
 }
 
 type ErrorResponse = {
@@ -18,13 +19,12 @@ type ErrorResponse = {
 
 export type Response<T> = SuccessResponse<T> | ClientFormattingErrorResponse<T> | ErrorResponse; 
 
-export const generalClientSuccess = <T>(status: SuccessResponse<T>['status'], data: T): SuccessResponse<T> => (
-  {status, data}
+export const generalClientSuccess = <T>(data: T): Response<T> => (
+  {status: 200, data}
 );
 
-
-export const clientFormattingErrorResponse = <T>(data: ClientFormattingErrorResponse<T>['message']): ClientFormattingErrorResponse<T> => (
-  {status: 400, message: data}
+export const clientFormattingErrorResponse = <T>(data: ClientFormattingErrorResponse<T>['data']): ClientFormattingErrorResponse<T> => (
+  {status: 400, data: data, message: "Error Parsing Client Data"}
 );
 
 

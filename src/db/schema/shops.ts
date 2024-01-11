@@ -22,7 +22,6 @@ export const shopsRelations = relations(shops, ({one, many}) => {
       references: [users.id],
     }),
     itemCategories: many(itemCategories),
-    itemVariantCategories: many(itemVariantCategories),
     paymentOptions: many(paymentOptions),
   }
 });

@@ -35,12 +35,18 @@ export const items = pgTable('items', {
     }
 });
 
-export const itemsRelations = relations(items, ({many}) => {
+export const itemsRelations = relations(items, ({one, many}) => {
   return {
+    shop: one(shops, {
+      fields: [items.shopId],
+      references: [shops.id]
+    }),
     categories: many(itemToCategories),
-    variants: many(itemVariants),
-    options: many(itemOptions),
-    addons: many(itemAddons),
+    variantCategories: many(itemVariantCategories),
+    options: many(itemOptions, {relationName: "parentItem"}),
+    addons: many(itemAddons, {relationName: "parentItem"}),
+    // TODO The backwards options and addons relationships are missing
+    // i.e. is this item an option and or addon for any other item(s)
   }
 });
 
@@ -72,44 +78,41 @@ export const itemToCategoriesRelations = relations(itemToCategories, ({one}) => 
 
 export const itemVariantCategories = pgTable('item_variant_categories', {
   id: serial('id').primaryKey(),
-  shopId: integer('shop_id').references(() => shops.id).notNull(),
+  parentItemId: integer('parent_item_id').references(() => items.id).notNull(),
   name: varchar('name', {length: 127}).notNull(),
+  index: serial('index').notNull().unique(),
 }, (table) => {
     return {
-      unq: unique().on(table.shopId, table.name),
+      unq: unique().on(table.parentItemId, table.name),
     }
 });
 
 export const itemVariantCategoriesRelations = relations(itemVariantCategories, ({one, many}) => {
   return {
-    shop: one(shops, {
-      fields: [itemVariantCategories.shopId],
-      references: [shops.id],
+    parentItem: one(items, {
+      fields: [itemVariantCategories.parentItemId],
+      references: [items.id],
     }),
-    variants: many(itemVariants)
+    variantOptions: many(itemVariants)
   }
 });
 
 export const itemVariants = pgTable('item_variants', {
   id: serial('id').primaryKey(),
-  itemId: integer('item_id').references(() => items.id),
-  category: integer('category').references(() => itemVariantCategories.id), 
-  name: varchar('name', {length: 127}),
+  categoryId: integer('category').references(() => itemVariantCategories.id).notNull(), 
+  name: varchar('name', {length: 127}).notNull(),
   price: real('price').default(0).notNull(),
+  index: serial('index').notNull().unique(),
 }, (table) => {
     return {
-      unq: unique().on(table.itemId, table.category, table.name)
+      unq: unique().on(table.categoryId, table.name),
     }
 });
 
 export const itemVariantsRelations = relations(itemVariants, ({one}) => {
   return {
-    item: one(items, {
-      fields: [itemVariants.itemId],
-      references: [items.id],
-    }),
     category: one(itemVariantCategories, {
-      fields: [itemVariants.category],
+      fields: [itemVariants.categoryId],
       references: [itemVariantCategories.id]
     })
   }
@@ -129,11 +132,12 @@ export const itemOptionsRelations = relations(itemOptions, ({one}) => {
   return {
     parentItem: one(items, {
       fields: [itemOptions.parentItemId],
-      references: [items.id]
+      references: [items.id],
+      relationName: "parentItem"
     }),
     optionItem: one(items, {
       fields: [itemOptions.optionItemId],
-      references: [items.id]
+      references: [items.id],
     }),
   }
 });
@@ -151,11 +155,12 @@ export const itemAddonsRelations = relations(itemAddons, ({one}) => {
   return {
     parentItem: one(items, {
       fields: [itemAddons.parentItemId],
-      references: [items.id]
+      references: [items.id],
+      relationName: "parentItem"
     }),
     addonItem: one(items, {
       fields: [itemAddons.addonItemId],
-      references: [items.id]
+      references: [items.id],
     }),
   }
 });
@@ -180,6 +185,22 @@ export const itemSchema = createSelectSchema(items);
 export type Item = z.infer<typeof itemSchema>;
 
 
+export const itemVariantCategoryInsertSchema = createInsertSchema(itemVariantCategories, {
+  name: z.string().nonempty("Must not be empty").max(127),
+});
+export type ItemVariantCategoryInsert = z.infer<typeof itemVariantCategoryInsertSchema>;
 
+export const itemVariantCategorySchema = createSelectSchema(itemVariantCategories);
+export type ItemVariantCategory = z.infer<typeof itemVariantCategorySchema>;
+
+
+export const itemVariantInsertSchema = createInsertSchema(itemVariants, {
+  name: z.string().nonempty("Must not be empty").max(127),
+  price: z.number().nonnegative()
+});
+export type ItemVariantInsert = z.infer<typeof itemVariantInsertSchema>;
+
+export const itemVariantSchema = createSelectSchema(itemVariants);
+export type itemVariant = z.infer<typeof itemVariantSchema>;
 
 

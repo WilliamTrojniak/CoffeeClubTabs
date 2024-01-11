@@ -30,7 +30,7 @@ export const queryShopById = cache(async (id: number) => {
 export const queryShopDetails = cache(async (id: number) => {
 
   const result = await db.query.shops.findFirst({
-    with: {itemCategories: true, itemVariantCategories: true, paymentOptions: true},
+    with: {itemCategories: true, paymentOptions: true},
     where: eq(shops.id, id),
   });
 
