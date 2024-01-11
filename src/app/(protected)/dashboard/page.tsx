@@ -16,7 +16,7 @@ const DashboardPage = async () => {
       <h1>Hello, {session?.user?.name}</h1>
       <ShopCreateForm/>
       <ShopsTable shops={shops.data}/>
-  </div>
+    </div>
   );
 }
 
