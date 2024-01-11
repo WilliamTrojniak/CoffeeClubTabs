@@ -47,14 +47,23 @@ export const queryItemById = cache(async (itemId: number) => {
         columns: {},
         with: { addonItem: true }
       },
-      categories: true,
+      categories: {
+        columns: {
+          id: true,
+        },
+        with: {
+          category: {
+            columns: {shopId: false}
+          },
+        }
+      },
       options: {
         columns: {},
         with: { optionItem: true }
       },
       variants: { 
         with: {
-          category: true
+          variantOptions: true
         }
       },
     },

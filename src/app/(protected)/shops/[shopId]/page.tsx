@@ -1,5 +1,4 @@
 import { getShopDetails } from "@/app/api/shops/shopsAPI";
-import ItemCreateCategoryForm from "@/components/ItemCreateCategoryForm";
 import ShopCreatePaymentOptionForm from "@/components/ShopCreatePaymentOptionForm";
 import { notFound } from "next/navigation";
 
@@ -24,8 +23,6 @@ export default async function ShopPage({params}: {params: {shopId: string}}) {
     <p>{result.data.name}</p> 
     <ShopCreatePaymentOptionForm shopId={shopId}/>
     {paymentOptions}
-    <ItemCreateCategoryForm shopId={shopId}/>
-    {itemCategories}
     </>
   );
 }

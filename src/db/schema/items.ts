@@ -42,7 +42,7 @@ export const itemsRelations = relations(items, ({one, many}) => {
       references: [shops.id]
     }),
     categories: many(itemToCategories),
-    variantCategories: many(itemVariantCategories),
+    variants: many(itemVariantCategories),
     options: many(itemOptions, {relationName: "parentItem"}),
     addons: many(itemAddons, {relationName: "parentItem"}),
     // TODO The backwards options and addons relationships are missing

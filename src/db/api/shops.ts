@@ -3,6 +3,7 @@ import { ShopInsert, ShopPaymentOptionInsertData, paymentOptions, shops } from "
 import { db } from "./database";
 import { cache } from "react";
 import 'server-only'
+import { itemCategories } from "../schema/items";
 
 export async function insertShop(data: ShopInsert) {
   const result = await db.insert(shops).values({ownerId: data.ownerId, name: data.name}).onConflictDoNothing().returning();
@@ -27,13 +28,25 @@ export const queryShopById = cache(async (id: number) => {
   return result[0];
 });
 
+export const queryShopCategoriesById = cache(async (shopId: number) => {
+  const result = await db.query.itemCategories.findMany({
+    where: eq(itemCategories.shopId, shopId),
+    columns: {
+      shopId: false,
+    }
+  });
+
+  if (!result) return null; // for consistency
+  return result;
+});
+
 export const queryShopDetails = cache(async (id: number) => {
 
   const result = await db.query.shops.findFirst({
     with: {itemCategories: true, paymentOptions: true},
     where: eq(shops.id, id),
   });
-
+  if (!result) return null; // for consistency
   return result;
 });
 
