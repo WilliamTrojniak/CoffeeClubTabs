@@ -1,6 +1,6 @@
 import { db } from "./database";
 import 'server-only'
-import { ItemCategoriesInsert, ItemInsert, ItemVariantCategoryInsert, itemCategories, itemVariantCategories, items } from "../schema/items";
+import { ItemCategoriesInsert, ItemCategory, ItemInsert, ItemVariantCategoryInsert, itemCategories, itemToCategories, itemVariantCategories, items } from "../schema/items";
 import { eq } from "drizzle-orm";
 import { cache } from "react";
 
@@ -19,6 +19,10 @@ export async function insertItem(data: ItemInsert) {
 
   if (result.length === 0) return null;
   return result[0];
+
+
+
+
 }
 
 export const queryItemsByShop = cache(async (shopId: number) => {
@@ -52,9 +56,7 @@ export const queryItemById = cache(async (itemId: number) => {
           id: true,
         },
         with: {
-          category: {
-            columns: {shopId: false}
-          },
+          category: true,
         }
       },
       options: {
@@ -72,4 +74,13 @@ export const queryItemById = cache(async (itemId: number) => {
   return result;
 });
 
+export async function insertAndLinkItemCategories(itemId: number, data: ItemCategoriesInsert[]) {
+  if(data.length === 0) return;
 
+  await db.transaction(async (tx) => {
+    const await tx.insert(itemCategories).values(data).onConflictDoNothing().returning();
+    const linkData = withIds.map(i => ({itemId, itemCategoryId: i.id}));
+    await tx.insert(itemToCategories).values(linkData).onConflictDoNothing();
+  });
+
+}

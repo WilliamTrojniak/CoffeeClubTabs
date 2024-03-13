@@ -31,9 +31,6 @@ export const queryShopById = cache(async (id: number) => {
 export const queryShopCategoriesById = cache(async (shopId: number) => {
   const result = await db.query.itemCategories.findMany({
     where: eq(itemCategories.shopId, shopId),
-    columns: {
-      shopId: false,
-    }
   });
 
   if (!result) return null; // for consistency

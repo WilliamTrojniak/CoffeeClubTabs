@@ -1,17 +1,18 @@
 'use client'
 
-import { ItemCategoriesInsert, ItemCategory, itemCategoriesInsertSchema } from "@/db/schema/items";
+import { ItemCategoriesInsert, ItemCategory, itemCategoriesInsertSchema, itemToCategories } from "@/db/schema/items";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form"
 import { z } from "zod";
-import ReactSelectAsyncCreatable from "react-select/async-creatable";
-import { useCallback, useState } from "react";
+import ReactSelectCreatable from "react-select/creatable";
+import { useCallback, useEffect, useId, useState } from "react";
+import { createAndAddItemCategories } from "@/app/api/items/itemsAPI";
 
 type CategoryType = Omit<ItemCategoriesInsert, "shopId">;
 
-export default function ItemCreateCategoryForm({shopId, selectedCategories, categories}: {shopId: number, selectedCategories: CategoryType[], categories: CategoryType[]}) {
+export default function ItemCreateCategoryForm({shopId, itemId, selectedCategories, categories}: {shopId: number, itemId: number, selectedCategories: ItemCategory[], categories: ItemCategory[]}) {
   
-  const {handleSubmit, control} = useForm<{categories: ItemCategoriesInsert[]}>({
+  const {handleSubmit, control, formState: {errors}} = useForm<{categories: ItemCategoriesInsert[]}>({
     defaultValues: {
       categories: selectedCategories,
     },
@@ -19,44 +20,44 @@ export default function ItemCreateCategoryForm({shopId, selectedCategories, cate
     resolver: zodResolver(z.object({categories: itemCategoriesInsertSchema.array()})),
   });
 
-  const [createdCategories, setCreatedCategories] = useState<string[]>([]);
-  const [removedCategories, setRemovedCategories] = useState<string[]>([]);
+  const [removedCategories, setRemovedCategories] = useState<number[]>([]);
 
 
   const createOption = useCallback((label: string) => {
     return {shopId, name: label} satisfies ItemCategoriesInsert;
   }, [shopId])
 
+  const selectId = useId();
+
+  useEffect(() => console.log(removedCategories), [removedCategories]);
 
   return (
     <form onSubmit={handleSubmit((data) => {
+
+      createAndAddItemCategories(shopId, itemId, data.categories);
+
     })}>
       <Controller
         name="categories"
         control={control}
         defaultValue={[]}
-        render={({field}) => <ReactSelectAsyncCreatable<CategoryType, true>
+        render={({field}) => <ReactSelectCreatable<CategoryType, true>
           {...field}
           onChange={(value, action) => {
             field.onChange(value, action);
-            if(action.action === 'create-option') {
-              setCreatedCategories(prev => ([...prev, action.option.name]));
-            } else if (action.action === 'select-option') {
-              setRemovedCategories(prev => prev.filter(i => i !== action.option?.name));
-            } else if (action.action === 'remove-value' || action.action === 'pop-value') {
-              if(createdCategories.includes(action.removedValue.name))
-                setCreatedCategories(prev => prev.filter(i => i !== action.removedValue.name));
-              else setRemovedCategories(prev => [...prev, action.removedValue.name]);
+            if (action.action === 'select-option' && action.option?.id) {
+                setRemovedCategories(prev => prev.filter(i => i !== action.option?.id));
+            } else if (action.removedValue?.id) {
+                setRemovedCategories(prev => [...prev, action.removedValue!.id!])
             } else if(action.action === 'clear') {
-              setCreatedCategories([]);
-              setRemovedCategories(selectedCategories.map(c => c.name));
+              setRemovedCategories(selectedCategories.map(c => c.id));
             }
-            console.log(createdCategories, removedCategories);
           }}
           isMulti
           placeholder={"Add categories..."}
           options={categories}
-          noOptionsMessage={({inputValue}) => !inputValue ? "Add a category..." : `${inputValue} is already added!`}
+          noOptionsMessage={({inputValue}) => 
+            !inputValue ? "Add a category..." : `${inputValue} is already added!`}
           getOptionLabel={(option) => option.name }
           getOptionValue={(option) => option.name}
           getNewOptionData={createOption}

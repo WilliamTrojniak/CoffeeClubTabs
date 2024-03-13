@@ -2,11 +2,12 @@
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { Item, ItemCategoriesInsert, ItemInsert, ItemVariantCategoryInsert, itemCategoriesInsertSchema, itemInsertSchema, itemVariantCategoryInsertSchema } from "@/db/schema/items";
+import { Item, ItemCategoriesInsert, ItemCategory, ItemInsert, ItemVariantCategoryInsert, itemCategoriesInsertSchema, itemInsertSchema, itemVariantCategoryInsertSchema } from "@/db/schema/items";
 import { Response, clientFormattingErrorResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "../responses";
-import { insertItem, insertItemCategory, insertItemVariantCategory, queryItemById, queryItemsByShop } from "@/db/api/items";
+import { insertAndLinkItemCategories, insertItem, insertItemCategory, insertItemVariantCategory, queryItemById, queryItemsByShop } from "@/db/api/items";
 import { z } from "zod";
 import { modifyShop } from "../shops/shopsAPI";
+import { revalidatePath } from "next/cache";
 
 export async function createItem(data: ItemInsert): Promise<Response<Item>> {
 
@@ -82,4 +83,9 @@ export async function getItemById(itemId: number) {
     return internalServerErrorReponse();
   }
 
+}
+
+export async function createAndAddItemCategories(shopId: number, itemId: number, data: ItemCategoriesInsert[] ) {
+  await insertAndLinkItemCategories(itemId, data);
+  revalidatePath(`/shops/${shopId}`);
 }

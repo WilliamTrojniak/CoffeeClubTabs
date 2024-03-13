@@ -25,6 +25,7 @@ export default async function ItemPage({params}: {params: {itemId: string, shopI
       <pre>{JSON.stringify(itemDataResponse.data)}</pre>
       <ItemCreateCategoryForm 
         shopId={itemData.shopId}
+        itemId={itemId}
         selectedCategories={itemData.categories.map(c => c.category)}
         categories={shopItemCategories}/>
     </>
