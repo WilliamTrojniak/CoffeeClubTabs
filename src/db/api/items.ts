@@ -97,6 +97,9 @@ export const queryItemById = cache(async (itemId: number) => {
         }
       },
       variants: { 
+        columns: {
+          parentItemId: false
+        },
         with: {
           variantOptions: true
         }
@@ -205,4 +208,6 @@ export async function removeItemOptionCategory(optionCategoryId: number, shopId:
   const result = await db.delete(itemOptionCategories).where(and(eq(itemOptionCategories.id, optionCategoryId), eq(itemOptionCategories.shopId, shopId))).returning();
   return result;
 }
+
+
 
