@@ -1,7 +1,7 @@
 import { db } from "./database";
 import 'server-only'
-import { ItemCategoriesInsert, ItemInsert, ItemOptionCategoryInsert, ItemVariantCategoryInsert, itemCategories, itemOptionCategories, itemToCategories, itemVariantCategories, items } from "../schema/items";
-import { and, count, eq, inArray } from "drizzle-orm";
+import { ItemCategoriesInsert, ItemInsert, ItemOptionCategoryInsert, ItemVariantCategoryInsert, itemAddons, itemCategories, itemOptionCategories, itemOptionCategoryOptions, itemOptionCategoryOptionsRelations, itemOptions, itemToCategories, itemVariantCategories, items } from "../schema/items";
+import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { cache } from "react";
 
 export async function insertItemCategory(data: ItemCategoriesInsert) {
@@ -29,6 +29,21 @@ export const queryItemsByShop = cache(async (shopId: number) => {
   const result = await db.query.items.findMany({
     where: eq(items.shopId, shopId),
   });
+  return result;
+});
+
+export const queryOptionItems = cache(async (shopId: number) => {
+  const variantCountSq = db.select({variantCount: count(itemVariantCategories.parentItemId).as('varCount'), itemId: itemVariantCategories.parentItemId}).from(itemVariantCategories).groupBy(itemVariantCategories.parentItemId).as('varCountSq');
+  const optionCountSq = db.select({optionCount: count(itemOptions.parentItemId).as('optionCount'), itemId: itemOptions.parentItemId}).from(itemOptions).groupBy(itemOptions.parentItemId).as('optionCountSq');
+  const addonCountSq = db.select({addonCount: count(itemAddons.parentItemId).as('addonCount'), itemId: itemAddons.parentItemId}).from(itemAddons).groupBy(itemAddons.parentItemId).as('addonCountSq');
+
+
+  const result = await db.select({id: items.id, name: items.name, shopId: items.shopId}).from(items)
+                                  .leftJoin(variantCountSq, eq(items.id, variantCountSq.itemId))
+                                  .leftJoin(optionCountSq, eq(items.id, optionCountSq.itemId))
+                                  .leftJoin(addonCountSq, eq(items.id, optionCountSq.itemId))
+                                  .where(and(eq(items.shopId, shopId), isNull(variantCountSq.variantCount), isNull(optionCountSq.optionCount), isNull(addonCountSq.addonCount)));
+
   return result;
 });
 
@@ -105,14 +120,14 @@ export async function linkItemCategories(itemId: number, itemCategoryIds: number
 
 
 // Remove a category tag from an item. If this is the last item under the category, deletes the category.
-export async function removeItemCategoriesLink(itemId: number, categoryIds: number[]) {
+export async function removeItemCategoriesLink(itemId: number, categoryIds: number[], shopId: number) {
   if (categoryIds.length === 0) return null;
   return await db.transaction(async tx => {
     // Get the number of remaining items within each category
-    const linkCount = await tx.select({count: count(itemToCategories.itemId), itemCategoryId: itemToCategories.itemCategoryId}).from(itemToCategories).where(inArray(itemToCategories.itemCategoryId, categoryIds)).groupBy(itemToCategories.itemCategoryId);
+    const linkCount = await tx.select({count: count(itemToCategories.itemId), itemCategoryId: itemToCategories.itemCategoryId}).from(itemToCategories).where(and(eq(itemToCategories.shopId, shopId), inArray(itemToCategories.itemCategoryId, categoryIds))).groupBy(itemToCategories.itemCategoryId);
 
     // Delete any entries with the item ID and the specified categories
-    const result = await tx.delete(itemToCategories).where(and(eq(itemToCategories.itemId, itemId), inArray(itemToCategories.itemCategoryId, categoryIds))).returning();
+    const result = await tx.delete(itemToCategories).where(and(eq(itemToCategories.shopId, shopId), eq(itemToCategories.itemId, itemId), inArray(itemToCategories.itemCategoryId, categoryIds))).returning();
 
     // i.e. if nothing was deleted, do nothing
     if (result.length === 0) return null;
@@ -140,7 +155,29 @@ export async function insertItemOptionCategory(data: ItemOptionCategoryInsert) {
 export const queryItemOptionCategories = cache(async (shopId: number) => {
   const result = await db.query.itemOptionCategories.findMany({
     where: eq(itemOptionCategories.shopId, shopId),
+    with: {
+      itemOptionCategoryOptions: {
+        columns: {},
+        with: {
+          optionItem: true,
+        }
+      }
+    }
   });
 
   return result;
 });
+
+export async function insertItemOptionCategoryOptions(optionCategoryId: number, itemIds: number[], shopId: number) {
+  const result = await db.insert(itemOptionCategoryOptions).values(itemIds.map(itemId => ({optionCategoryId, shopId, optionItemId: itemId}))).returning();
+  
+  if(result.length === 0) return null;
+
+  return result;
+}
+
+export async function removeItemOptionCategoryOptions(optionCategoryId: number, itemIds: number[], shopId: number) {
+  const result = await db.delete(itemOptionCategoryOptions).where(and(eq(itemOptionCategoryOptions.shopId, shopId), eq(itemOptionCategoryOptions.optionCategoryId, optionCategoryId), inArray(itemOptionCategoryOptions.optionItemId, itemIds))).returning();
+  return result;
+
+}

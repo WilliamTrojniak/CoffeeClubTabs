@@ -3,6 +3,7 @@ import { shops } from "./shops";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
+import { relative } from "path";
 
 export const itemCategories = pgTable('item_categories', {
   id: serial('id').primaryKey(),
@@ -49,6 +50,7 @@ export const itemsRelations = relations(items, ({one, many}) => {
     addons: many(itemAddons, {relationName: "parentItem"}),
     // TODO The backwards options and addons relationships are missing
     // i.e. is this item an option and or addon for any other item(s)
+    childOption: many(itemOptionCategoryOptions, {relationName: "itemOptionChildItems"}),
   }
 });
 
@@ -167,9 +169,13 @@ export const itemOptionCategoryOptions = pgTable('item_option_category_options',
     }
 })
 
-export const itemOptionCategoryOptionsRelations = relations(itemOptionCategoryOptions, ({one, many}) => {
+export const itemOptionCategoryOptionsRelations = relations(itemOptionCategoryOptions, ({one}) => {
   return {
-    optionItems: many(items),
+    optionItem: one(items, {
+      fields: [itemOptionCategoryOptions.optionItemId],
+      references: [items.id],
+      relationName: "itemOptionChildItems"
+    }),
     optionCategory: one(itemOptionCategories, {
       fields: [itemOptionCategoryOptions.optionCategoryId],
       references: [itemOptionCategories.id]
