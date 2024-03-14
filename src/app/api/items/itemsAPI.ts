@@ -2,14 +2,12 @@
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { Item, ItemCategoriesInsert, ItemCategory, ItemInsert, ItemVariantCategoryInsert, itemCategoriesInsertSchema, itemInsertSchema, itemVariantCategoryInsertSchema } from "@/db/schema/items";
+import { Item, ItemCategoriesInsert, ItemInsert, ItemVariantCategoryInsert, itemCategoriesInsertSchema, itemInsertSchema, itemVariantCategoryInsertSchema } from "@/db/schema/items";
 import { Response, clientFormattingErrorResponse, dataConflictResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "../responses";
-import { createItemCategories, insertAndLinkItemCategories, insertItem, insertItemCategories, insertItemCategory, insertItemVariantCategory, linkItemCategories, queryItemById, queryItemCategoriesById, queryItemsByShop, removeItemCategoriesLink } from "@/db/api/items";
+import { insertItem, insertItemCategories, insertItemCategory, insertItemVariantCategory, linkItemCategories, queryItemById, queryItemCategoriesById, queryItemsByShop, removeItemCategoriesLink } from "@/db/api/items";
 import { z } from "zod";
 import { modifyShop } from "../shops/shopsAPI";
 import { revalidatePath } from "next/cache";
-import { Result } from "postcss";
-import { queryShopById } from "@/db/api/shops";
 
 export async function createItem(data: ItemInsert): Promise<Response<Item>> {
 
@@ -107,18 +105,17 @@ export async function createLinkAndPurgeItemCategories(itemId: number, categoryD
     if(itemData.shop.ownerId !== session.user.id) return unauthorizedResponse();
 
     const existingCategories = parsedCategoryData.data.filter(i => i.id) as {shopId: number, id: number, name: string}[];
-    const categoryValidationData = await queryItemCategoriesById(existingCategories.map(i => i.id));
 
-    if (existingCategories.length > 0 && existingCategories.length !== categoryValidationData?.filter(i => i.shopId === itemData.shopId).length) return dataConflictResponse();
-
-    const newCategories = await insertItemCategories(categoryData.filter(category => !category.id).map(category => ({shopId: itemData.shopId, name: category.name})));
+    const newCategories = await insertItemCategories(categoryData.filter(category => !category.id).map(category => ({shopId: itemData.shop.id, name: category.name})));
     const toLink = newCategories ? newCategories.concat(existingCategories) : existingCategories;
   
-    await linkItemCategories(itemId, toLink.map(category => category.id));
+    // TODO Provide better feedback if an error occurs here? Will throw an error
+    // if the item and any of the categories do not belong to the same shop
+    await linkItemCategories(itemId, toLink.map(category => category.id), itemData.shop.id);
 
     await removeItemCategoriesLink(itemId, removedCategories);
 
-    revalidatePath(`/shops/${itemData.shopId}`);
+    revalidatePath(`/shops/${itemData.shop.id}`);
 
     return generalClientSuccess(toLink);
   } catch (e) {

@@ -1,9 +1,8 @@
 import { db } from "./database";
 import 'server-only'
-import { ItemCategoriesInsert, ItemCategory, ItemInsert, ItemVariantCategoryInsert, itemCategories, itemCategoriesInsertSchema, itemCategoriesRelations, itemToCategories, itemVariantCategories, items } from "../schema/items";
-import { and, count, countDistinct, eq, inArray } from "drizzle-orm";
+import { ItemCategoriesInsert, ItemInsert, ItemVariantCategoryInsert, itemCategories, itemToCategories, itemVariantCategories, items } from "../schema/items";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { cache } from "react";
-import { link } from "fs";
 
 export async function insertItemCategory(data: ItemCategoriesInsert) {
   const result = await db.insert(itemCategories).values(data).onConflictDoNothing().returning();
@@ -42,9 +41,13 @@ export async function insertItemVariantCategory(data: ItemVariantCategoryInsert)
 export const queryItemById = cache(async (itemId: number) => {
   const result = await db.query.items.findFirst({
     where: eq(items.id, itemId),
+    columns: {
+      shopId: false,
+    },
     with: {
       shop: {
         columns : {
+          id: true,
           ownerId: true,
         }
       },
@@ -53,16 +56,20 @@ export const queryItemById = cache(async (itemId: number) => {
         with: { addonItem: true }
       },
       categories: {
-        columns: {
-          id: true,
-        },
+        columns: {},
         with: {
           category: true,
         }
       },
       options: {
         columns: {},
-        with: { optionItem: true }
+        with: { 
+          optionCategory: {
+            with: {
+              itemOptions: true
+            }
+          } 
+        }
       },
       variants: { 
         with: {
@@ -89,10 +96,10 @@ export async function queryItemCategoriesById(categoryIds: number[]) {
   return result;
 }
 
-export async function linkItemCategories(itemId: number, itemCategoryIds: number[]) {
+export async function linkItemCategories(itemId: number, itemCategoryIds: number[], shopId: number) {
   if (itemCategoryIds.length === 0) return null;
 
-  const linkData = itemCategoryIds.map(id => ({itemId, itemCategoryId: id}));
+  const linkData = itemCategoryIds.map(id => ({itemId, itemCategoryId: id, shopId}));
   await db.insert(itemToCategories).values(linkData).onConflictDoNothing();
 }
 

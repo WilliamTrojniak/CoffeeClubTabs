@@ -28,7 +28,6 @@ export default function ItemCreateCategoryForm({shopId, itemId, selectedCategori
   }, [shopId])
 
   const selectId = useId();
-
   return (
     <form onSubmit={handleSubmit(async (data) => {
       // TODO Fix issue where a newly added category cannot be removed until reload

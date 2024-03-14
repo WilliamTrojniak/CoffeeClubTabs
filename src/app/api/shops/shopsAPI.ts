@@ -29,7 +29,8 @@ export async function createShop(data: ShopInsert): Promise<Response<Shop>> {
 
     revalidatePath('/');
     return generalClientSuccess(result); 
-  } catch {
+  } catch (e) {
+    console.log(e);
     return internalServerErrorReponse(); 
   }
 }
