@@ -3,7 +3,7 @@ import { createItemOptionCategory } from "@/app/api/items/itemsAPI";
 import { ItemOptionCategoryInsert } from "@/db/schema/items";
 import { useForm } from "react-hook-form";
 
-export default function ItemOptionsForm({shopId}: {shopId: number}) {
+export default function ItemOptionCategoryCreateForm({shopId}: {shopId: number}) {
   
   const {handleSubmit, register, reset} = useForm<ItemOptionCategoryInsert>({
     defaultValues: {
