@@ -1,4 +1,4 @@
-import { integer, pgTable, primaryKey, real, serial, unique, varchar } from "drizzle-orm/pg-core";
+import { integer, pgTable, primaryKey, real, serial, unique, varchar, foreignKey } from "drizzle-orm/pg-core";
 import { shops } from "./shops";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -10,6 +10,7 @@ export const itemCategories = pgTable('item_categories', {
   name: varchar('name', {length: 127}).notNull(), 
 }, (table) => {
     return {
+      unq_key: unique().on(table.id, table.shopId), // For foreign key references
       unq: unique().on(table.shopId, table.name), // Name of categories must be unique within a shop
     }
 });
@@ -31,7 +32,8 @@ export const items = pgTable('items', {
   basePrice: real('base_price').notNull(),
 }, (table) => {
     return {
-      unq: unique().on(table.shopId, table.name), // Items within a shop must be uniquely named
+      unq_id: unique().on(table.id, table.shopId), // For foreign key references
+      unq_name: unique().on(table.shopId, table.name), // Items within a shop must be uniquely named
     }
 });
 
@@ -54,12 +56,22 @@ export const itemsRelations = relations(items, ({one, many}) => {
 // Can have multiple items per category
 // and multiple categories per item
 export const itemToCategories = pgTable('items_to_categories', {
-  id: serial('id').primaryKey(),
-  itemId: integer('item_id').references(() => items.id).notNull(),
-  itemCategoryId: integer('item_category_id').references(() => itemCategories.id).notNull(),
+  shopId: integer('shop_id').notNull(),
+  itemId: integer('item_id'),
+  itemCategoryId: integer('item_category_id'),
 }, (table) => {
     return {
-      unq: unique().on(table.itemId, table.itemCategoryId), // Can't add item to category multiple times
+      pk: primaryKey({columns: [table.itemId, table.itemCategoryId]}),
+      item_fk: foreignKey({
+        columns: [table.shopId, table.itemId],
+        foreignColumns: [items.shopId, items.id],
+        name: "item_fk"
+      }),
+      itemCategory_fk: foreignKey({
+        columns: [table.shopId, table.itemCategoryId],
+        foreignColumns: [itemCategories.shopId, itemCategories.id],
+        name: "itemCategory_fk"
+      }),
     }
 });
 
@@ -118,36 +130,100 @@ export const itemVariantsRelations = relations(itemVariants, ({one}) => {
   }
 });
 
-export const itemOptions = pgTable('item_options', {
-  parentItemId: integer('parent_item_id').references(() => items.id),
-  optionItemId: integer('option_item_id').references(() => items.id),
-  optionName: varchar('option_name', {length: 127}).notNull(),
+export const itemOptionCategories = pgTable('item_option_categories', {
+  id: serial('id').primaryKey(),
+  shopId: integer('shop_id').references(() => shops.id).notNull(),
+  name: varchar('name', {length: 127}).notNull(),
 }, (table) => {
     return {
-      pk: primaryKey({columns: [table.parentItemId, table.optionItemId]}),
+      unq_id: unique().on(table.id, table.shopId),
+      unq_name: unique().on(table.shopId, table.name),
+    }
+});
+
+export const itemOptionCategoriesRelations = relations(itemOptionCategories, ({many}) => {
+  return {
+    itemOptionCategoryOptions: many(itemOptionCategoryOptions),
+    itemOptions: many(itemOptions),
+  }
+
+})
+
+export const itemOptionCategoryOptions = pgTable('item_option_category_options', {
+  optionCategoryId: integer('option_category_id'),
+  optionItemId: integer('item_option_id'),
+  shopId: integer('shop_id').references(() => shops.id),
+}, (table) => {
+    return {
+      pk: primaryKey({columns: [table.optionCategoryId, table.optionItemId]}),
+      optionCategory_fk: foreignKey({
+        columns: [table.shopId, table.optionCategoryId],
+        foreignColumns: [itemOptionCategories.shopId, itemOptionCategories.id]
+      }),
+      optionItem_fk: foreignKey({
+        columns: [table.shopId, table.optionItemId],
+        foreignColumns: [items.shopId, items.id],
+      })
+    }
+})
+
+export const itemOptionCategoryOptionsRelations = relations(itemOptionCategoryOptions, ({one, many}) => {
+  return {
+    optionItems: many(items),
+    optionCategory: one(itemOptionCategories, {
+      fields: [itemOptionCategoryOptions.optionCategoryId],
+      references: [itemOptionCategories.id]
+    })
+  }
+});
+
+export const itemOptions = pgTable('item_options', {
+  parentItemId: integer('parent_item_id'),
+  optionCategoryId: integer('option_item_id'),
+  shopId: integer('shop_id').notNull(),
+}, (table) => {
+    return {
+      pk: primaryKey({columns: [table.parentItemId, table.optionCategoryId]}),
+      item_fk: foreignKey({
+        columns: [table.shopId, table.parentItemId],
+        foreignColumns: [items.shopId, items.id]
+      }),
+      category_fk: foreignKey({
+        columns: [table.shopId, table.optionCategoryId],
+        foreignColumns: [itemOptionCategories.shopId, itemOptionCategories.id]
+      })
     }
 });
 
 export const itemOptionsRelations = relations(itemOptions, ({one}) => {
   return {
+    optionCategory: one(itemOptionCategories, {
+      fields: [itemOptions.optionCategoryId],
+      references: [itemOptionCategories.id],
+      relationName: "optionCategory"
+    }),
     parentItem: one(items, {
       fields: [itemOptions.parentItemId],
-      references: [items.id],
-      relationName: "parentItem"
-    }),
-    optionItem: one(items, {
-      fields: [itemOptions.optionItemId],
       references: [items.id],
     }),
   }
 });
 
 export const itemAddons = pgTable('item_addons', {
-  parentItemId: integer('parent_item_id').references(() => items.id),
-  addonItemId: integer('addon_item_id').references(() => items.id),
+  parentItemId: integer('parent_item_id'),
+  addonItemId: integer('addon_item_id'),
+  shopId: integer('shop_id').notNull(),
 }, (table) => {
     return {
-      pk: primaryKey({columns: [table.parentItemId, table.addonItemId]})
+      pk: primaryKey({columns: [table.parentItemId, table.addonItemId]}),
+      parentItem_fk: foreignKey({
+        columns: [table.shopId, table.parentItemId],
+        foreignColumns: [items.shopId, items.id],
+      }),
+      addonItem_fk: foreignKey({
+        columns: [table.shopId, table.parentItemId],
+        foreignColumns: [items.shopId, items.id],
+      }),
     }
 });
 

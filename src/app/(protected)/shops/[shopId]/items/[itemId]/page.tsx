@@ -1,6 +1,7 @@
 import { getItemById } from "@/app/api/items/itemsAPI";
 import { getShopItemCategoriesById } from "@/app/api/shops/shopsAPI";
 import ItemCreateCategoryForm from "@/components/ItemCreateForms/ItemCreateCategoryForm";
+import ItemOptionsForm from "@/components/ItemCreateForms/ItemOptionsForm";
 import { notFound } from "next/navigation";
 
 export default async function ItemPage({params}: {params: {itemId: string, shopId: string}}) {
@@ -28,6 +29,7 @@ export default async function ItemPage({params}: {params: {itemId: string, shopI
         itemId={itemId}
         selectedCategories={itemData.categories.map(c => c.category)}
         categories={shopItemCategories}/>
+      <ItemOptionsForm/>
     </>
   );
 
