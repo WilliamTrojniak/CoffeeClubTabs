@@ -4,12 +4,13 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { Item, ItemCategoriesInsert, ItemInsert, ItemOptionCategoryInsert, ItemVariantCategoryInsert, itemCategoriesInsertSchema, itemInsertSchema, itemOptionCategoryInsertSchema, itemVariantCategoryInsertSchema } from "@/db/schema/items";
 import { Response, clientFormattingErrorResponse, dataConflictResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "../responses";
-import { insertItem, insertItemCategories, insertItemCategory, insertItemOption, insertItemOptionCategory, insertItemOptionCategoryOptions, insertItemVariantCategory, linkItemCategories, queryItemById, queryItemCategoriesById, queryItemOptionCategories, queryItemsByShop, queryOptionItems, removeItemCategoriesLink, removeItemOption, removeItemOptionCategoryOptions } from "@/db/api/items";
+import { insertItem, insertItemCategories, insertItemCategory, insertItemOption, insertItemOptionCategory, insertItemOptionCategoryOptions, insertItemVariantCategory, linkItemCategories, queryItemById, queryItemCategoriesById, queryItemOptionCategories, queryItemsByShop, queryOptionItems, removeItemCategoriesLink, removeItemOption, removeItemOptionCategory, removeItemOptionCategoryOptions } from "@/db/api/items";
 import { z } from "zod";
 import { modifyShop } from "../shops/shopsAPI";
 import { revalidatePath } from "next/cache";
 import { ConsoleLogWriter } from "drizzle-orm";
 import { parse } from "path";
+import { timingSafeEqual } from "crypto";
 
 export async function createItem(data: ItemInsert): Promise<Response<Item>> {
 
@@ -248,3 +249,18 @@ export async function deleteItemOption(optionCategoryId: number, itemId: number,
 
 }
 
+
+
+// TODO Better error handling here since a failure probably means something depends on it
+export async function deleteItemOptionCategory(optionCategoryId: number, shopId: number) {
+  const parsedCatId = z.number().int().min(1).safeParse(optionCategoryId);
+  const parsedShopId = z.number().int().min(1).safeParse(shopId);
+  if(!parsedCatId.success || !parsedShopId.success) return notFoundResponse();
+  
+  const session = await getServerSession(authOptions);
+  if(!session?.user.id) return unauthenticatedResponse();
+
+
+  return modifyShop(shopId, () => removeItemOptionCategory(optionCategoryId, shopId));
+
+}

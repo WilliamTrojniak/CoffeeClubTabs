@@ -1,6 +1,6 @@
 'use client'
 
-import { createItemOption, createOptionCategoryOptions, deleteItemOption, deleteOptionCategoryOptions } from "@/app/api/items/itemsAPI";
+import { createItemOption, createOptionCategoryOptions, deleteItemOption, deleteItemOptionCategory, deleteOptionCategoryOptions } from "@/app/api/items/itemsAPI";
 import { Item, ItemCategory } from "@/db/schema/items"
 import { Controller, useForm } from "react-hook-form"
 import ReactSelect from "react-select";
@@ -53,7 +53,9 @@ export default function ItemOptionCategoryModifyForm({itemId, itemHasEnabled, ca
         if (itemHasEnabled) await deleteItemOption(category.id, itemId, category.shopId);
         else await createItemOption(category.id, itemId, category.shopId);
       }}>{itemHasEnabled ? "Toggle Disabled" : "Toggle Enabled"}</button>
-      <button>Delete</button>
+      <button type="button" onClick={async () => {
+        await deleteItemOptionCategory(category.id, category.shopId);
+      }}>Delete</button>
     </form>
   );
 

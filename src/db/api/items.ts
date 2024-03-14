@@ -201,3 +201,8 @@ export async function removeItemOption(itemId: number, optionCategoryId: number,
   return result;
 }
 
+export async function removeItemOptionCategory(optionCategoryId: number, shopId: number) {
+  const result = await db.delete(itemOptionCategories).where(and(eq(itemOptionCategories.id, optionCategoryId), eq(itemOptionCategories.shopId, shopId))).returning();
+  return result;
+}
+
