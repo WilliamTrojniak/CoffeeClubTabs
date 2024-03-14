@@ -2,12 +2,13 @@
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { Item, ItemCategoriesInsert, ItemInsert, ItemVariantCategoryInsert, itemCategoriesInsertSchema, itemInsertSchema, itemVariantCategoryInsertSchema } from "@/db/schema/items";
+import { Item, ItemCategoriesInsert, ItemInsert, ItemOptionCategoryInsert, ItemVariantCategoryInsert, itemCategoriesInsertSchema, itemInsertSchema, itemOptionCategoryInsertSchema, itemVariantCategoryInsertSchema } from "@/db/schema/items";
 import { Response, clientFormattingErrorResponse, dataConflictResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "../responses";
-import { insertItem, insertItemCategories, insertItemCategory, insertItemVariantCategory, linkItemCategories, queryItemById, queryItemCategoriesById, queryItemsByShop, removeItemCategoriesLink } from "@/db/api/items";
+import { insertItem, insertItemCategories, insertItemCategory, insertItemOptionCategory, insertItemVariantCategory, linkItemCategories, queryItemById, queryItemCategoriesById, queryItemOptionCategories, queryItemsByShop, removeItemCategoriesLink } from "@/db/api/items";
 import { z } from "zod";
 import { modifyShop } from "../shops/shopsAPI";
 import { revalidatePath } from "next/cache";
+import { parse } from "path";
 
 export async function createItem(data: ItemInsert): Promise<Response<Item>> {
 
@@ -123,4 +124,34 @@ export async function createLinkAndPurgeItemCategories(itemId: number, categoryD
     return internalServerErrorReponse();
   }
 }
+
+export async function createItemOptionCategory(optionCategoryData: ItemOptionCategoryInsert) {
+  const parsed = itemOptionCategoryInsertSchema.safeParse(optionCategoryData);
+
+  if (!parsed.success) return clientFormattingErrorResponse(parsed.error.format());
+
+  return modifyShop(parsed.data.shopId, () => insertItemOptionCategory(parsed.data));
+
+}
+
+
+export async function getItemOptionCategoriesByShop(shopId: number) {
+  const session = await getServerSession(authOptions);
+  if(!session?.user.id)
+    return unauthenticatedResponse();
+
+  const parsed = z.number().int().safeParse(shopId) 
+  if(!parsed.success)
+    return clientFormattingErrorResponse(parsed.error.format())
+
+  try {
+    const result = await queryItemOptionCategories(parsed.data);
+    return generalClientSuccess(result);
+  } catch (e) {
+    console.error(e);
+    return internalServerErrorReponse();
+  }
+}
+
+
 

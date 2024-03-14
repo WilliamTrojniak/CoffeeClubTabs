@@ -152,7 +152,7 @@ export const itemOptionCategoriesRelations = relations(itemOptionCategories, ({m
 export const itemOptionCategoryOptions = pgTable('item_option_category_options', {
   optionCategoryId: integer('option_category_id').notNull(),
   optionItemId: integer('item_option_id').notNull(),
-  shopId: integer('shop_id').references(() => shops.id),
+  shopId: integer('shop_id').references(() => shops.id).notNull(),
 }, (table) => {
     return {
       pk: primaryKey({columns: [table.optionCategoryId, table.optionItemId]}),
@@ -244,7 +244,7 @@ export const itemAddonsRelations = relations(itemAddons, ({one}) => {
 
 
 export const itemCategoriesInsertSchema = createInsertSchema(itemCategories, {
-    name: z.string().nonempty().max(127),
+    name: z.string().trim().min(1).max(127),
 });
 export type ItemCategoriesInsert = z.infer<typeof itemCategoriesInsertSchema>;
 
@@ -253,7 +253,7 @@ export type ItemCategory = z.infer<typeof itemCategorySchema>;
 
 
 export const itemInsertSchema = createInsertSchema(items, {
-  name: z.string().nonempty("Must not be empty").max(127),
+  name: z.string().trim().min(1).max(127),
   basePrice: z.number().nonnegative()
 });
 export type ItemInsert = z.infer<typeof itemInsertSchema>;
@@ -263,7 +263,7 @@ export type Item = z.infer<typeof itemSchema>;
 
 
 export const itemVariantCategoryInsertSchema = createInsertSchema(itemVariantCategories, {
-  name: z.string().nonempty("Must not be empty").max(127),
+  name: z.string().trim().min(1).max(127),
 });
 export type ItemVariantCategoryInsert = z.infer<typeof itemVariantCategoryInsertSchema>;
 
@@ -272,7 +272,7 @@ export type ItemVariantCategory = z.infer<typeof itemVariantCategorySchema>;
 
 
 export const itemVariantInsertSchema = createInsertSchema(itemVariants, {
-  name: z.string().nonempty("Must not be empty").max(127),
+  name: z.string().trim().min(1).max(127),
   price: z.number().nonnegative()
 });
 export type ItemVariantInsert = z.infer<typeof itemVariantInsertSchema>;
@@ -280,4 +280,7 @@ export type ItemVariantInsert = z.infer<typeof itemVariantInsertSchema>;
 export const itemVariantSchema = createSelectSchema(itemVariants);
 export type itemVariant = z.infer<typeof itemVariantSchema>;
 
-
+export const itemOptionCategoryInsertSchema = createInsertSchema(itemOptionCategories, {
+  name: z.string().trim().min(1).max(127),
+});
+export type ItemOptionCategoryInsert = z.infer<typeof itemOptionCategoryInsertSchema>;

@@ -1,6 +1,6 @@
 import { db } from "./database";
 import 'server-only'
-import { ItemCategoriesInsert, ItemInsert, ItemVariantCategoryInsert, itemCategories, itemToCategories, itemVariantCategories, items } from "../schema/items";
+import { ItemCategoriesInsert, ItemInsert, ItemOptionCategoryInsert, ItemVariantCategoryInsert, itemCategories, itemOptionCategories, itemToCategories, itemVariantCategories, items } from "../schema/items";
 import { and, count, eq, inArray } from "drizzle-orm";
 import { cache } from "react";
 
@@ -129,3 +129,18 @@ export async function removeItemCategoriesLink(itemId: number, categoryIds: numb
   });
 
 }
+
+
+export async function insertItemOptionCategory(data: ItemOptionCategoryInsert) {
+  const result = await db.insert(itemOptionCategories).values(data).returning();
+  if (result.length === 0) return null;
+  return result[0];
+}
+
+export const queryItemOptionCategories = cache(async (shopId: number) => {
+  const result = await db.query.itemOptionCategories.findMany({
+    where: eq(itemOptionCategories.shopId, shopId),
+  });
+
+  return result;
+});
