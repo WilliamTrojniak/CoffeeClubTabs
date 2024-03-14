@@ -2,15 +2,12 @@
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { Item, ItemCategoriesInsert, ItemInsert, ItemOptionCategoryInsert, ItemVariantCategoryInsert, itemCategoriesInsertSchema, itemInsertSchema, itemOptionCategoryInsertSchema, itemVariantCategoryInsertSchema } from "@/db/schema/items";
+import { Item, ItemCategoriesInsert, ItemInsert, ItemOptionCategoryInsert, ItemVariantCategoryInsert, itemCategoriesInsertSchema, itemInsertSchema, itemOptionCategoryInsertSchema, itemVariantCategories, itemVariantCategoryInsertSchema } from "@/db/schema/items";
 import { Response, clientFormattingErrorResponse, dataConflictResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "../responses";
 import { insertItem, insertItemCategories, insertItemCategory, insertItemOption, insertItemOptionCategory, insertItemOptionCategoryOptions, insertItemVariantCategory, linkItemCategories, queryItemById, queryItemCategoriesById, queryItemOptionCategories, queryItemsByShop, queryOptionItems, removeItemCategoriesLink, removeItemOption, removeItemOptionCategory, removeItemOptionCategoryOptions } from "@/db/api/items";
 import { z } from "zod";
 import { modifyShop } from "../shops/shopsAPI";
 import { revalidatePath } from "next/cache";
-import { ConsoleLogWriter } from "drizzle-orm";
-import { parse } from "path";
-import { timingSafeEqual } from "crypto";
 
 export async function createItem(data: ItemInsert): Promise<Response<Item>> {
 
@@ -61,8 +58,15 @@ export async function createItemVariantCategory(data: ItemVariantCategoryInsert)
   if (!parsed.success)
     return clientFormattingErrorResponse(parsed.error.format());
 
-  // TODO Ammend
-  return modifyShop(parsed.data.shopId, () => insertItemVariantCategory(parsed.data));
+  try {
+    const itemDetails = await queryItemById(parsed.data.parentItemId);
+    if(!itemDetails) return dataConflictResponse();
+    
+    return modifyShop(itemDetails.shop.id, () => insertItemVariantCategory(parsed.data));
+  } catch (e) {
+    console.log(e);
+    return internalServerErrorReponse();
+  }
 
 }
 
@@ -187,9 +191,6 @@ export async function createOptionCategoryOptions(optionCategoryId: number, item
   if(!parsedShopId.success) return notFoundResponse();
   if(!parsedItemIds.success) return clientFormattingErrorResponse(parsedItemIds.error.format());
 
-  const session = await getServerSession(authOptions);
-  if(!session?.user.id) return unauthenticatedResponse();
-
   return modifyShop(shopId, () => insertItemOptionCategoryOptions(parsedOptionCategoryId.data, parsedItemIds.data, parsedShopId.data));
 
 }
@@ -204,9 +205,6 @@ export async function deleteOptionCategoryOptions(optionCategoryId: number, item
   if(!parsedOptionCategoryId.success) return clientFormattingErrorResponse(parsedOptionCategoryId.error.format());
   if(!parsedShopId.success) return notFoundResponse();
   if(!parsedItemIds.success) return clientFormattingErrorResponse(parsedItemIds.error.format());
-
-  const session = await getServerSession(authOptions);
-  if(!session?.user.id) return unauthenticatedResponse();
 
   if(itemIds.length === 0) return null;
 
@@ -223,10 +221,6 @@ export async function createItemOption(optionCategoryId: number, itemId: number,
   if(!parsedOptionCategoryId.success) return clientFormattingErrorResponse(parsedOptionCategoryId.error.format());
   if(!parsedShopId.success || !parsedItemId.success) return notFoundResponse();
 
-  const session = await getServerSession(authOptions);
-  if(!session?.user.id) return unauthenticatedResponse();
-
-
   return modifyShop(shopId, () => insertItemOption(parsedItemId.data, parsedOptionCategoryId.data, parsedShopId.data));
 
 }
@@ -241,10 +235,6 @@ export async function deleteItemOption(optionCategoryId: number, itemId: number,
   if(!parsedOptionCategoryId.success) return clientFormattingErrorResponse(parsedOptionCategoryId.error.format());
   if(!parsedShopId.success || !parsedItemId.success) return notFoundResponse();
 
-  const session = await getServerSession(authOptions);
-  if(!session?.user.id) return unauthenticatedResponse();
-
-
   return modifyShop(shopId, () => removeItemOption(parsedItemId.data, parsedOptionCategoryId.data, parsedShopId.data));
 
 }
@@ -257,10 +247,6 @@ export async function deleteItemOptionCategory(optionCategoryId: number, shopId:
   const parsedShopId = z.number().int().min(1).safeParse(shopId);
   if(!parsedCatId.success || !parsedShopId.success) return notFoundResponse();
   
-  const session = await getServerSession(authOptions);
-  if(!session?.user.id) return unauthenticatedResponse();
-
-
   return modifyShop(shopId, () => removeItemOptionCategory(optionCategoryId, shopId));
 
 }

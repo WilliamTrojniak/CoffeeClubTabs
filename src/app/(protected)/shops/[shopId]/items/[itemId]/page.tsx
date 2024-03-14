@@ -3,6 +3,7 @@ import { getShopItemCategoriesById } from "@/app/api/shops/shopsAPI";
 import ItemCreateCategoryForm from "@/components/ItemCreateForms/ItemCreateCategoryForm";
 import ItemOptionCategoryCreateForm from "@/components/ItemCreateForms/ItemOptionCategoryCreateForm";
 import ItemOptionCategoryModifyForm from "@/components/ItemCreateForms/ItemOptionCategoryModifyForm";
+import ItemVariantCategoryCreateForm from "@/components/ItemCreateForms/ItemVariantCategoryCreateForm";
 import { notFound } from "next/navigation";
 
 export default async function ItemPage({params}: {params: {itemId: string, shopId: string}}) {
@@ -39,6 +40,8 @@ export default async function ItemPage({params}: {params: {itemId: string, shopI
         itemId={itemId}
         selectedCategories={itemData.categories.map(c => c.category)}
         categories={shopItemCategories}/>
+      <ItemVariantCategoryCreateForm itemId={itemData.id}/>
+      {itemData.variants.map(v => (<h4 key={v.id}>{v.name}</h4>))}
       <ItemOptionCategoryCreateForm shopId={itemData.shop.id}/>
       {itemOptionCategories.map(i => (
         <ItemOptionCategoryModifyForm
