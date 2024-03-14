@@ -9,10 +9,11 @@ import 'server-only'
 // Create a user entry with a unique id
 // Update user values if the user already exists
 export async function createUser(id: string, name?: string, email?: string) {
-  console.log(`Creating user with id ${id}...`);
   if (name || email) {
+    console.log(`Updating user with id ${id}...`);
     await db.insert(users).values({id, name, email}).onConflictDoUpdate({target: users.id, set: {name: name, email: email}}).returning(); 
   } else {
+    console.log(`Creating user with id ${id}...`);
     await db.insert(users).values({id, name, email}).onConflictDoNothing().returning();
   }
 }

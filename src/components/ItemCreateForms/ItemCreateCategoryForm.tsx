@@ -1,12 +1,12 @@
 'use client'
 
-import { ItemCategoriesInsert, ItemCategory, itemCategoriesInsertSchema, itemToCategories } from "@/db/schema/items";
+import { ItemCategoriesInsert, ItemCategory, itemCategoriesInsertSchema } from "@/db/schema/items";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form"
 import { z } from "zod";
 import ReactSelectCreatable from "react-select/creatable";
-import { useCallback, useEffect, useId, useState } from "react";
-import { createAndAddItemCategories } from "@/app/api/items/itemsAPI";
+import { useCallback, useId, useState } from "react";
+import { createLinkAndPurgeItemCategories } from "@/app/api/items/itemsAPI";
 
 type CategoryType = Omit<ItemCategoriesInsert, "shopId">;
 
@@ -29,13 +29,10 @@ export default function ItemCreateCategoryForm({shopId, itemId, selectedCategori
 
   const selectId = useId();
 
-  useEffect(() => console.log(removedCategories), [removedCategories]);
-
   return (
-    <form onSubmit={handleSubmit((data) => {
-
-      createAndAddItemCategories(shopId, itemId, data.categories);
-
+    <form onSubmit={handleSubmit(async (data) => {
+      // TODO Fix issue where a newly added category cannot be removed until reload
+      await createLinkAndPurgeItemCategories(itemId, data.categories, removedCategories);      
     })}>
       <Controller
         name="categories"

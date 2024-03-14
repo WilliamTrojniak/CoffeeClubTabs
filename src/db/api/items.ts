@@ -1,8 +1,9 @@
 import { db } from "./database";
 import 'server-only'
-import { ItemCategoriesInsert, ItemCategory, ItemInsert, ItemVariantCategoryInsert, itemCategories, itemToCategories, itemVariantCategories, items } from "../schema/items";
-import { eq } from "drizzle-orm";
+import { ItemCategoriesInsert, ItemCategory, ItemInsert, ItemVariantCategoryInsert, itemCategories, itemCategoriesInsertSchema, itemCategoriesRelations, itemToCategories, itemVariantCategories, items } from "../schema/items";
+import { and, count, countDistinct, eq, inArray } from "drizzle-orm";
 import { cache } from "react";
+import { link } from "fs";
 
 export async function insertItemCategory(data: ItemCategoriesInsert) {
   const result = await db.insert(itemCategories).values(data).onConflictDoNothing().returning();
@@ -74,13 +75,50 @@ export const queryItemById = cache(async (itemId: number) => {
   return result;
 });
 
-export async function insertAndLinkItemCategories(itemId: number, data: ItemCategoriesInsert[]) {
-  if(data.length === 0) return;
+export async function insertItemCategories(data: ItemCategoriesInsert[]) {
+  if (data.length === 0) return;
+  const result = await db.insert(itemCategories).values(data).onConflictDoNothing().returning();
+  if (result.length === 0) return null;
+  return result;
+}
 
-  await db.transaction(async (tx) => {
-    const await tx.insert(itemCategories).values(data).onConflictDoNothing().returning();
-    const linkData = withIds.map(i => ({itemId, itemCategoryId: i.id}));
-    await tx.insert(itemToCategories).values(linkData).onConflictDoNothing();
+export async function queryItemCategoriesById(categoryIds: number[]) {
+  if (categoryIds.length === 0) return null;
+  const result = await db.select().from(itemCategories).where(inArray(itemCategories.id, categoryIds));
+  if (result.length === 0) return null;
+  return result;
+}
+
+export async function linkItemCategories(itemId: number, itemCategoryIds: number[]) {
+  if (itemCategoryIds.length === 0) return null;
+
+  const linkData = itemCategoryIds.map(id => ({itemId, itemCategoryId: id}));
+  await db.insert(itemToCategories).values(linkData).onConflictDoNothing();
+}
+
+
+// Remove a category tag from an item. If this is the last item under the category, deletes the category.
+export async function removeItemCategoriesLink(itemId: number, categoryIds: number[]) {
+  if (categoryIds.length === 0) return null;
+  return await db.transaction(async tx => {
+    // Get the number of remaining items within each category
+    const linkCount = await tx.select({count: count(itemToCategories.itemId), itemCategoryId: itemToCategories.itemCategoryId}).from(itemToCategories).where(inArray(itemToCategories.itemCategoryId, categoryIds)).groupBy(itemToCategories.itemCategoryId);
+
+    // Delete any entries with the item ID and the specified categories
+    const result = await tx.delete(itemToCategories).where(and(eq(itemToCategories.itemId, itemId), inArray(itemToCategories.itemCategoryId, categoryIds))).returning();
+
+    // i.e. if nothing was deleted, do nothing
+    if (result.length === 0) return null;
+    
+
+    // Get the categories with only one connection before deletion (now zero)
+    const emptyCategoryIds = linkCount.filter(link => link.count === 1).map(link => link.itemCategoryId);
+    
+    // Delete all empty categories
+    if (emptyCategoryIds.length > 0)
+      await tx.delete(itemCategories).where(inArray(itemCategories.id, emptyCategoryIds));
+
+    return result;
   });
 
 }
