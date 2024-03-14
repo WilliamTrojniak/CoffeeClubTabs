@@ -1,27 +1,27 @@
 'use client'
 
-import { createOptionCategoryOptions, deleteOptionCategoryOptions } from "@/app/api/items/itemsAPI";
+import { createItemOption, createOptionCategoryOptions, deleteItemOption, deleteOptionCategoryOptions } from "@/app/api/items/itemsAPI";
 import { Item, ItemCategory } from "@/db/schema/items"
-import { useState } from "react";
 import { Controller, useForm } from "react-hook-form"
 import ReactSelect from "react-select";
 
 type ItemType = Omit<Item, 'basePrice'>;
 
 type PropsType = {
+  itemId: number,
+  itemHasEnabled: boolean,
   category: ItemCategory,
   addonItems: ItemType[],
   defaultItems: ItemType[],
 }
 
-export default function ItemOptionCategoryModifyForm({category, addonItems, defaultItems} : PropsType) {
+export default function ItemOptionCategoryModifyForm({itemId, itemHasEnabled, category, addonItems, defaultItems} : PropsType) {
 
-  const {handleSubmit, control} = useForm<{optionItems: ItemType[]}>({
+  const {control} = useForm<{optionItems: ItemType[]}>({
     defaultValues: {
       optionItems: defaultItems,
     }
   });
-
 
   return (
     <form>
@@ -49,6 +49,11 @@ export default function ItemOptionCategoryModifyForm({category, addonItems, defa
           getOptionValue={(option) => option.name}
         />}
       />
+      <button type="button" onClick={async () => {
+        if (itemHasEnabled) await deleteItemOption(category.id, itemId, category.shopId);
+        else await createItemOption(category.id, itemId, category.shopId);
+      }}>{itemHasEnabled ? "Toggle Disabled" : "Toggle Enabled"}</button>
+      <button>Delete</button>
     </form>
   );
 

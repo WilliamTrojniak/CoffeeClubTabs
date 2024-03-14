@@ -80,8 +80,18 @@ export const queryItemById = cache(async (itemId: number) => {
         columns: {},
         with: { 
           optionCategory: {
+            columns: {
+              shopId: false
+            },
             with: {
-              itemOptions: true
+              itemOptionCategoryOptions: {
+                columns: {},
+                with: {
+                  optionItem: {
+                    columns: {shopId: false},
+                  }
+                }
+              }
             }
           } 
         }
@@ -179,5 +189,15 @@ export async function insertItemOptionCategoryOptions(optionCategoryId: number, 
 export async function removeItemOptionCategoryOptions(optionCategoryId: number, itemIds: number[], shopId: number) {
   const result = await db.delete(itemOptionCategoryOptions).where(and(eq(itemOptionCategoryOptions.shopId, shopId), eq(itemOptionCategoryOptions.optionCategoryId, optionCategoryId), inArray(itemOptionCategoryOptions.optionItemId, itemIds))).returning();
   return result;
-
 }
+
+export async function insertItemOption(itemId: number, optionCategoryId: number, shopId: number) {
+  const result = await db.insert(itemOptions).values({parentItemId: itemId, optionCategoryId, shopId}).returning();
+  return result;
+}
+
+export async function removeItemOption(itemId: number, optionCategoryId: number, shopId: number) {
+  const result = await db.delete(itemOptions).where(and(eq(itemOptions.shopId, shopId), eq(itemOptions.optionCategoryId, optionCategoryId), eq(itemOptions.parentItemId, itemId))).returning();
+  return result;
+}
+

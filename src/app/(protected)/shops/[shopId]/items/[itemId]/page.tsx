@@ -40,7 +40,14 @@ export default async function ItemPage({params}: {params: {itemId: string, shopI
         selectedCategories={itemData.categories.map(c => c.category)}
         categories={shopItemCategories}/>
       <ItemOptionCategoryCreateForm shopId={itemData.shop.id}/>
-      {itemOptionCategories.map(i => (<ItemOptionCategoryModifyForm key={i.id} category={i} addonItems={addonItems} defaultItems={i.itemOptionCategoryOptions.map(i => i.optionItem)}/>))}
+      {itemOptionCategories.map(i => (
+        <ItemOptionCategoryModifyForm
+          key={i.id} itemId={itemData.id}
+          itemHasEnabled={itemData.options.find(optionCategory => optionCategory.optionCategory.id === i.id) ? true : false} 
+          category={i}
+          addonItems={addonItems}
+          defaultItems={i.itemOptionCategoryOptions.map(i => i.optionItem)}/>
+      ))}
     </>
   );
 
