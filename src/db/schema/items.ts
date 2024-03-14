@@ -57,8 +57,8 @@ export const itemsRelations = relations(items, ({one, many}) => {
 // and multiple categories per item
 export const itemToCategories = pgTable('items_to_categories', {
   shopId: integer('shop_id').notNull(),
-  itemId: integer('item_id'),
-  itemCategoryId: integer('item_category_id'),
+  itemId: integer('item_id').notNull(),
+  itemCategoryId: integer('item_category_id').notNull(),
 }, (table) => {
     return {
       pk: primaryKey({columns: [table.itemId, table.itemCategoryId]}),
@@ -150,8 +150,8 @@ export const itemOptionCategoriesRelations = relations(itemOptionCategories, ({m
 })
 
 export const itemOptionCategoryOptions = pgTable('item_option_category_options', {
-  optionCategoryId: integer('option_category_id'),
-  optionItemId: integer('item_option_id'),
+  optionCategoryId: integer('option_category_id').notNull(),
+  optionItemId: integer('item_option_id').notNull(),
   shopId: integer('shop_id').references(() => shops.id),
 }, (table) => {
     return {
@@ -178,8 +178,8 @@ export const itemOptionCategoryOptionsRelations = relations(itemOptionCategoryOp
 });
 
 export const itemOptions = pgTable('item_options', {
-  parentItemId: integer('parent_item_id'),
-  optionCategoryId: integer('option_item_id'),
+  parentItemId: integer('parent_item_id').notNull(),
+  optionCategoryId: integer('option_item_id').notNull(),
   shopId: integer('shop_id').notNull(),
 }, (table) => {
     return {
@@ -205,13 +205,14 @@ export const itemOptionsRelations = relations(itemOptions, ({one}) => {
     parentItem: one(items, {
       fields: [itemOptions.parentItemId],
       references: [items.id],
+      relationName: "parentItem"
     }),
   }
 });
 
 export const itemAddons = pgTable('item_addons', {
-  parentItemId: integer('parent_item_id'),
-  addonItemId: integer('addon_item_id'),
+  parentItemId: integer('parent_item_id').notNull(),
+  addonItemId: integer('addon_item_id').notNull(),
   shopId: integer('shop_id').notNull(),
 }, (table) => {
     return {
