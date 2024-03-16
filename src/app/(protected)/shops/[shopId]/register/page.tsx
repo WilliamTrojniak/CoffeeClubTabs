@@ -1,4 +1,4 @@
-import { getItemsByShop } from "@/app/api/items/itemsAPI";
+import { getItemsByShopId } from "@/app/api/items/itemsAPI";
 import { getShopDetails } from "@/app/api/shops/shopsAPI";
 import ItemCreateForm from "@/components/ItemCreateForms/ItemCreateForm";
 import Link from "next/link";
@@ -9,7 +9,7 @@ export default async function RegisterPage({params}: {params: {shopId: string}})
   const shopId = parseInt(params.shopId);
   if(!shopId) return notFound();
   
-  const itemsData = await getItemsByShop(shopId);
+  const itemsData = await getItemsByShopId(shopId);
   if (itemsData.status === 404 || itemsData.status === 400) return notFound(); 
   if (itemsData.status !== 200) throw new Error(itemsData.message);
   

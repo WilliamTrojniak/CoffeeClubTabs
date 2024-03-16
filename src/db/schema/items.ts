@@ -271,6 +271,7 @@ export type Item = z.infer<typeof itemSchema>;
 export const itemVariantCategoryInsertSchema = createInsertSchema(itemVariantCategories, {
   name: z.string().trim().min(1).max(127),
 });
+
 export type ItemVariantCategoryInsert = z.infer<typeof itemVariantCategoryInsertSchema>;
 
 export const itemVariantCategorySchema = createSelectSchema(itemVariantCategories);
@@ -284,7 +285,7 @@ export const itemVariantInsertSchema = createInsertSchema(itemVariants, {
 export type ItemVariantInsert = z.infer<typeof itemVariantInsertSchema>;
 
 export const itemVariantSchema = createSelectSchema(itemVariants);
-export type itemVariant = z.infer<typeof itemVariantSchema>;
+export type ItemVariant = z.infer<typeof itemVariantSchema>;
 
 export const itemOptionCategoryInsertSchema = createInsertSchema(itemOptionCategories, {
   name: z.string().trim().min(1).max(127),

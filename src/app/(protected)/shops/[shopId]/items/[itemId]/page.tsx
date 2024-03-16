@@ -1,9 +1,12 @@
 import { getAddonItems, getItemById, getItemOptionCategoriesByShop } from "@/app/api/items/itemsAPI";
-import { getShopItemCategoriesById } from "@/app/api/shops/shopsAPI";
+import { getItemCategoriesByShopId } from "@/app/api/shops/shopsAPI";
 import ItemCreateCategoryForm from "@/components/ItemCreateForms/ItemCreateCategoryForm";
+import ItemCreateForm from "@/components/ItemCreateForms/ItemCreateForm";
 import ItemOptionCategoryCreateForm from "@/components/ItemCreateForms/ItemOptionCategoryCreateForm";
 import ItemOptionCategoryModifyForm from "@/components/ItemCreateForms/ItemOptionCategoryModifyForm";
 import ItemVariantCategoryCreateForm from "@/components/ItemCreateForms/ItemVariantCategoryCreateForm";
+import ItemVariantForm from "@/components/ItemCreateForms/ItemVariantForm/ItemVariantForm";
+import { itemCategories } from "@/db/schema/items";
 import { notFound } from "next/navigation";
 
 export default async function ItemPage({params}: {params: {itemId: string, shopId: string}}) {
@@ -13,7 +16,7 @@ export default async function ItemPage({params}: {params: {itemId: string, shopI
   if(!itemId || !shopId) return notFound();
 
   const itemDataResponse = await getItemById(itemId);
-  const shopItemCategoriesResponse = await getShopItemCategoriesById(shopId);
+  const shopItemCategoriesResponse = await getItemCategoriesByShopId(shopId);
   const itemOptionCategoriesReponse = await getItemOptionCategoriesByShop(shopId);
   const addonItemsResponse = await getAddonItems(shopId);
 
@@ -35,23 +38,27 @@ export default async function ItemPage({params}: {params: {itemId: string, shopI
     <>
       <h1>Item Page for {itemDataResponse.data.name}</h1>
       <pre>{JSON.stringify(itemDataResponse.data)}</pre>
-      <ItemCreateCategoryForm 
-        shopId={itemData.shop.id}
-        itemId={itemId}
-        selectedCategories={itemData.categories.map(c => c.category)}
-        categories={shopItemCategories}/>
-      <ItemVariantCategoryCreateForm itemId={itemData.id}/>
-      {itemData.variants.map(v => (<h4 key={v.id}>{v.name}</h4>))}
-      <ItemOptionCategoryCreateForm shopId={itemData.shop.id}/>
-      {itemOptionCategories.map(i => (
-        <ItemOptionCategoryModifyForm
-          key={i.id} itemId={itemData.id}
-          itemHasEnabled={itemData.options.find(optionCategory => optionCategory.optionCategory.id === i.id) ? true : false} 
-          category={i}
-          addonItems={addonItems}
-          defaultItems={i.itemOptionCategoryOptions.map(i => i.optionItem)}/>
-      ))}
+      <ItemCreateForm shopId={shopId} itemId={itemId}/>
+
+
     </>
   );
 
 }
+
+      // <ItemCreateCategoryForm 
+      //   shopId={itemData.shop.id}
+      //   itemId={itemId}
+      //   selectedCategories={itemData.categories.map(c => c.category)}
+      //   categories={shopItemCategories}/>
+      // <ItemVariantCategoryCreateForm itemId={itemData.id}/>
+      // {itemData.variants.map(v => (<ItemVariantForm key={v.id} itemId={itemData.id} variantCategory={v} variants={v.variantOptions}/>))}
+      // <ItemOptionCategoryCreateForm shopId={itemData.shop.id}/>
+      // {itemOptionCategories.map(i => (
+      //   <ItemOptionCategoryModifyForm
+      //     key={i.id} itemId={itemData.id}
+      //     itemHasEnabled={itemData.options.find(optionCategory => optionCategory.optionCategory.id === i.id) ? true : false} 
+      //     category={i}
+      //     addonItems={addonItems}
+      //     defaultItems={i.itemOptionCategoryOptions.map(i => i.optionItem)}/>
+      // ))}

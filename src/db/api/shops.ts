@@ -1,45 +1,35 @@
 import { asc, eq } from "drizzle-orm";
 import { ShopInsert, ShopPaymentOptionInsertData, paymentOptions, shops } from "../schema/shops";
-import { db } from "./database";
+import { DBTransaction } from "./database";
 import { cache } from "react";
 import 'server-only'
-import { itemCategories } from "../schema/items";
 
-export async function insertShop(data: ShopInsert) {
-  const result = await db.insert(shops).values({ownerId: data.ownerId, name: data.name}).onConflictDoNothing().returning();
+export async function insertShop(tx: DBTransaction, data: ShopInsert) {
+  const result = await tx.insert(shops).values({ownerId: data.ownerId, name: data.name}).onConflictDoNothing().returning();
   if (result.length === 0) return null;
   return result[0];
 }
 
-export async function removeShop(shopId: number) {
-  const result = await db.delete(shops).where(eq(shops.id, shopId)).returning();
+export async function removeShop(tx: DBTransaction, shopId: number) {
+  const result = await tx.delete(shops).where(eq(shops.id, shopId)).returning();
   if (result.length === 0) return null;
   return result[0];
 }
 
-export const queryUserShops = cache(async (userId: string) => {
-  const result = await db.select().from(shops).where(eq(shops.ownerId, userId)).orderBy(asc(shops.name));
+export const queryUserShops = cache(async (tx: DBTransaction, userId: string) => {
+  const result = await tx.select().from(shops).where(eq(shops.ownerId, userId)).orderBy(asc(shops.name));
   return result;
 });
 
-export const queryShopById = cache(async (id: number) => {
-  const result = await db.select().from(shops).where(eq(shops.id, id));
+export const queryShopById = cache(async (tx: DBTransaction, id: number) => {
+  const result = await tx.select().from(shops).where(eq(shops.id, id));
   if (result.length === 0) return null;
   return result[0];
 });
 
-export const queryShopCategoriesById = cache(async (shopId: number) => {
-  const result = await db.query.itemCategories.findMany({
-    where: eq(itemCategories.shopId, shopId),
-  });
+export const queryShopDetails = cache(async (tx: DBTransaction, id: number) => {
 
-  if (!result) return null; // for consistency
-  return result;
-});
-
-export const queryShopDetails = cache(async (id: number) => {
-
-  const result = await db.query.shops.findFirst({
+  const result = await tx.query.shops.findFirst({
     with: {itemCategories: true, paymentOptions: true},
     where: eq(shops.id, id),
   });
@@ -47,8 +37,8 @@ export const queryShopDetails = cache(async (id: number) => {
   return result;
 });
 
-export async function insertPaymentOption(data: ShopPaymentOptionInsertData) {
-  const result = await db.insert(paymentOptions).values(data).onConflictDoNothing().returning();
+export async function insertPaymentOption(tx: DBTransaction, data: ShopPaymentOptionInsertData) {
+  const result = await tx.insert(paymentOptions).values(data).onConflictDoNothing().returning();
   if (result.length === 0) return null;
   return result[0];
 }

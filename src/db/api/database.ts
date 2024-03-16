@@ -13,3 +13,6 @@ import * as users from "@/db/schema/users"
 });
 
 export const db = drizzle(pool, {schema: {...items, ...receipts, ...shops, ...tabs, ...users}});
+
+export type DBTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+

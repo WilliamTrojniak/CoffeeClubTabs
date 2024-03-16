@@ -3,10 +3,12 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { Shop, ShopInsert, ShopPaymentOptionInsertData, shopInsertSchema, shopPaymentOptionInsertSchema } from "@/db/schema/shops";
-import { insertPaymentOption, insertShop, queryShopById, queryShopCategoriesById, queryShopDetails, queryUserShops, removeShop } from "@/db/api/shops";
+import { insertPaymentOption, insertShop, queryShopById, queryShopDetails, queryUserShops, removeShop } from "@/db/api/shops";
 import { Response, clientFormattingErrorResponse, dataConflictResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "@/app/api/responses";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { DBTransaction, db } from "@/db/api/database";
+import { queryItemCategoriesByShopId } from "@/db/api/itemCategories";
 
 export async function createShop(data: ShopInsert): Promise<Response<Shop>> {
   
@@ -21,9 +23,9 @@ export async function createShop(data: ShopInsert): Promise<Response<Shop>> {
 
   if (session.user.id != parseResult.data.ownerId)
     return unauthorizedResponse(); 
-  
+
   try {
-    const result = await insertShop(parseResult.data);
+    const result = await db.transaction(async tx => await insertShop(tx, parseResult.data)); 
     if (!result)
       return dataConflictResponse(); 
 
@@ -35,20 +37,22 @@ export async function createShop(data: ShopInsert): Promise<Response<Shop>> {
   }
 }
 
-export async function deleteShop(shopId: number): Promise<Response<Shop>> {
+export async function deleteShop(shopId: number){
   const session = await getServerSession(authOptions);
   if (!session?.user.id)
     return unauthenticatedResponse();
 
   try {
-    const target = await queryShopById(shopId);
-    if (!target)
-      return notFoundResponse();
+    const result = await db.transaction(async tx => {
+      const target = await queryShopById(tx, shopId);
+      if (!target)
+        return notFoundResponse();
 
-    if(target.ownerId !== session.user.id)
-      return unauthorizedResponse();
+      if(target.ownerId !== session.user.id)
+        return unauthorizedResponse();
 
-    const result = await removeShop(shopId);
+      return await removeShop(tx, shopId);
+    });
     if (!result) return notFoundResponse();
     revalidatePath('/');
     return generalClientSuccess(result);
@@ -59,7 +63,7 @@ export async function deleteShop(shopId: number): Promise<Response<Shop>> {
 
 export async function getUserShops(userId: string) {
   try {
-    const result = await queryUserShops(userId);
+    const result = await db.transaction(async tx => await queryUserShops(tx, userId));
     return generalClientSuccess(result); 
   } catch {
     return internalServerErrorReponse(); 
@@ -68,7 +72,7 @@ export async function getUserShops(userId: string) {
 
 export async function getShopById(shopId: number) {
   try {
-    const result = await queryShopById(shopId);
+    const result = await db.transaction(async tx => await queryShopById(tx, shopId));
     if (!result) return notFoundResponse();
     return generalClientSuccess(result);
   } catch {
@@ -86,7 +90,7 @@ export async function getShopDetails(shopId: number) {
   
 
   try {
-    const shopData = await queryShopDetails(parsed.data);
+    const shopData = await db.transaction(async tx => await queryShopDetails(tx, parsed.data));
     if (!shopData) return notFoundResponse();
     if (shopData.ownerId !== session.user.id) return unauthorizedResponse();
     return generalClientSuccess(shopData);
@@ -96,17 +100,18 @@ export async function getShopDetails(shopId: number) {
   }
 }
 
-export async function modifyShop<T>(shopId: number, modifyFunc: () => Promise<T | null>): Promise<Response<T>> {
+export async function modifyShop<T>(tx: DBTransaction, shopId: number | undefined, modifyFunc: (tx: DBTransaction, shopId: number) => Promise<T | null>): Promise<Response<T>> {
   const session = await getServerSession(authOptions);
   if(!session?.user.id)
     return unauthenticatedResponse();
 
   try {
-    const shopData = await queryShopById(shopId);
+    if(!shopId) return notFoundResponse();
+    const shopData = await queryShopById(tx, shopId);
     if(!shopData) return notFoundResponse();
     if(shopData.ownerId !== session.user.id) return unauthorizedResponse();
 
-    const result = await modifyFunc();
+    const result = await modifyFunc(tx, shopId);
     if(!result) return dataConflictResponse();
     revalidatePath(`/shops/${shopId}`)
     return generalClientSuccess(result)
@@ -121,16 +126,18 @@ export async function createPaymentOption(data: ShopPaymentOptionInsertData) {
   if (!parsed.success)
     return clientFormattingErrorResponse(parsed.error.format());
   
-  return modifyShop(parsed.data.shopId, () => insertPaymentOption(parsed.data));
+  return await db.transaction(async tx => {
+    return await modifyShop(tx, parsed.data.shopId, () => insertPaymentOption(tx, parsed.data));
+  });
 }
 
-export async function getShopItemCategoriesById(shopId: number) {
+export async function getItemCategoriesByShopId(shopId: number) {
   const parsed = z.number().int().min(0).safeParse(shopId);
   if(!parsed.success)
     return clientFormattingErrorResponse(parsed.error.format());
 
   try {
-    const shopCategories = await queryShopCategoriesById(shopId);
+    const shopCategories = await db.transaction(async tx => await queryItemCategoriesByShopId(tx, shopId));
     if(!shopCategories) return notFoundResponse();
     return generalClientSuccess(shopCategories);
   } catch (e) {
