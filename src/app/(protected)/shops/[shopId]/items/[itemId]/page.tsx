@@ -37,7 +37,7 @@ export default async function ItemPage({params}: {params: {itemId: string, shopI
   return (
     <>
       <h1>Item Page for {itemDataResponse.data.name}</h1>
-      <pre>{JSON.stringify(itemDataResponse.data)}</pre>
+      <pre>{JSON.stringify(itemData)}</pre>
       <ItemCreateForm shopId={shopId} item={itemData} shopItemCategories={shopItemCategories}/>
 
 

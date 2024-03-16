@@ -18,7 +18,7 @@ export async function insertItem(tx: DBTransaction, data: ItemInsert) {
     where: eq(items.shopId, data.shopId)
   }).returning();
 
-  if (result.length === 0) return null;
+  if (result.length !== 1) return null;
   return result[0];
 }
 

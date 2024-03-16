@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
 import ItemCreateCategoryForm from "./ItemCreateCategoryForm";
 import { queryItemById } from "@/db/api/items";
+import ItemVariantsInput from "./ItemVariantForm/ItemVariantsInput";
+import { useEffect } from "react";
 
 type PropsType = {
   shopId: number,
@@ -25,14 +27,18 @@ export default function ItemCreateForm({shopId, item, shopItemCategories}: Props
         id: item?.id,
       },
       itemCategories: item?.categories.map(category => category.category) ?? [],
+      itemVariants: item?.variants ?? [],
     },
     // TODO Add a resolver
   });
-  const {register, handleSubmit} = methods;
+  const {register, handleSubmit } = methods;
 
   return (
     <FormProvider {...methods}>
-      <form noValidate onSubmit={handleSubmit(async (formData) => await updateItem(formData))}>  
+      <form noValidate onSubmit={handleSubmit(async (formData) => {
+        console.log(formData);
+        console.log(await updateItem(formData));
+      })}>  
         <input type="hidden" {...register("item.id")} defaultValue={item?.id}/>
         <input type="hidden" {...register("item.shopId")} defaultValue={shopId}/>
         <label>
@@ -46,6 +52,7 @@ export default function ItemCreateForm({shopId, item, shopItemCategories}: Props
           })} defaultValue={item?.basePrice} />
         </label>
         <ItemCreateCategoryForm name="itemCategories" shopId={shopId} categoryOptions={shopItemCategories}/>
+        <ItemVariantsInput name="itemVariants" itemId={item?.id}/>
         <button>Submit</button>
       </form>
     </FormProvider>

@@ -2,18 +2,21 @@
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { Item, ItemCategoriesInsert, ItemInsert, ItemOptionCategoryInsert, itemCategoriesInsertSchema, itemInsertSchema, itemOptionCategoryInsertSchema } from "@/db/schema/items";
+import { Item, ItemCategoriesInsert, ItemInsert, ItemOptionCategoryInsert, ItemVariantCategoryInsert, ItemVariantInsert, itemCategoriesInsertSchema, itemInsertSchema, itemOptionCategoryInsertSchema, itemVariantCategories, itemVariantCategoryInsertSchema, itemVariantCategorySchema, itemVariantInsertSchema, itemVariants } from "@/db/schema/items";
 import { Response, clientFormattingErrorResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "../responses";
 import { insertItem, insertItemOption, insertItemOptionCategory, insertItemOptionCategoryOptions, queryItemById, queryItemOptionCategories, queryItemsByShop, queryOptionItems, removeItemOption, removeItemOptionCategory, removeItemOptionCategoryOptions } from "@/db/api/items";
 import { z } from "zod";
 import { modifyShop } from "../shops/shopsAPI";
 import { db } from "@/db/api/database";
-import { insertAndSetItemCategories } from "@/db/api/itemCategories";
+import { insertAndSetItemCategories, insertItemCategories } from "@/db/api/itemCategories";
 import { revalidatePath } from "next/cache";
+import ItemVariantOptionsInput from "@/components/ItemCreateForms/ItemVariantForm/ItemVariantOptionsInput";
+import { updateItemVariantCategories, updateItemVariantOptions, updateItemVariantsOptions } from "@/db/api/itemVariants";
 
 export type ItemUpdateData = {
   item: ItemInsert,
   itemCategories: ItemCategoriesInsert[],
+  itemVariants: (ItemVariantCategoryInsert & {variantOptions: ItemVariantInsert[]})[],
 }
 
 
@@ -22,6 +25,19 @@ export async function updateItem(data: ItemUpdateData) {
   const schema = z.object({
     item: itemInsertSchema,
     itemCategories: itemCategoriesInsertSchema.array(),
+    itemVariants: itemVariantCategoryInsertSchema.merge(z.object({variantOptions: itemVariantInsertSchema.array()})).array().transform(
+      itemVariantArr => {
+        return itemVariantArr.reduce<{categories: ItemVariantCategoryInsert[], options: ItemVariantInsert[][]}>((accumulator, itemVariant) => {
+          accumulator.categories.push({
+            id: itemVariant.id, 
+            index: itemVariant.index, 
+            name: itemVariant.name,
+          });
+          accumulator.options.push(itemVariant.variantOptions);
+          return accumulator;
+        }, {categories: [], options: []})
+      }
+    ),
   });
 
   const parsed = schema.safeParse(data);
@@ -29,15 +45,33 @@ export async function updateItem(data: ItemUpdateData) {
   if(!parsed.success)
     return clientFormattingErrorResponse(parsed.error.format());
 
-  console.log(parsed.data.item);
+  console.log(parsed.data);
   
   const result = await db.transaction(async tx => {
-    const itemResult = await modifyShop(tx, parsed.data.item.shopId, () => insertItem(tx, parsed.data.item));
-    if (itemResult.status !== 200) return itemResult;
-    const itemCategoriesResult = await insertAndSetItemCategories(tx, itemResult.data.id, parsed.data.itemCategories, parsed.data.item.shopId);
+    return await modifyShop(tx, parsed.data.item.shopId, async (tx, shopId) => {
+      // TODO Fix authorization
+      const itemData = await insertItem(tx, parsed.data.item);
+      if (!itemData) {
+        tx.rollback();
+        return;
+      }
+      
+      const itemCategoriesData = await insertAndSetItemCategories(tx, itemData.id, parsed.data.itemCategories.map(data => ({...data, shopId})), parsed.data.item.shopId);
+
+      // Set item variant categories and add their options
+      await tx.transaction(async tx => {
+        const itemVariantCategoriesData = await updateItemVariantCategories(tx, itemData.id, parsed.data.itemVariants.categories);
+        if (itemVariantCategoriesData.length !== parsed.data.itemVariants.categories.length) {
+          tx.rollback();
+          return
+        }
+        const itemVariantsData = await updateItemVariantsOptions(tx, parsed.data.itemVariants.options, itemVariantCategoriesData.map(cat => cat.id));
+      });
+
+      return itemData;
+    });
   });
 
-  revalidatePath(`/shops/${parsed.data.item.shopId}`)
 
   return result;
 }
