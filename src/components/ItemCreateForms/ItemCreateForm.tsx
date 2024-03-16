@@ -8,6 +8,7 @@ import ItemCreateCategoryForm from "./ItemCreateCategoryForm";
 import { queryItemById } from "@/db/api/items";
 import ItemVariantsInput from "./ItemVariantForm/ItemVariantsInput";
 import ItemOptionsInput from "./ItemOptionInput/ItemOptionsInput";
+import ItemSelect from "../ItemSelect/ItemSelect";
 
 type PropsType = {
   shopId: number,
@@ -31,6 +32,7 @@ export default function ItemCreateForm({shopId, item, shopItemCategories, shopIt
       itemCategories: item?.categories.map(category => category.category) ?? [],
       itemVariants: item?.variants ?? [],
       itemOptions: shopItemOptionCategories.map(category => ({...category, enabled: item?.options.find(itemCategory => itemCategory.optionCategory.id === category.id) ? true : false})) ?? [],
+      itemAddons: item?.addons.map(entry => entry.addonItem) ?? [], // TODO Fill in
     },
     // TODO Add a resolver
   });
@@ -57,6 +59,7 @@ export default function ItemCreateForm({shopId, item, shopItemCategories, shopIt
         <ItemCreateCategoryForm name="itemCategories" shopId={shopId} categoryOptions={shopItemCategories}/>
         <ItemVariantsInput name="itemVariants" itemId={item?.id}/>
         <ItemOptionsInput name="itemOptions" itemId={item?.id} addonItems={addonItems}/>
+        <ItemSelect name="itemAddons" addonItems={addonItems}/>
         <button>Submit</button>
       </form>
     </FormProvider>

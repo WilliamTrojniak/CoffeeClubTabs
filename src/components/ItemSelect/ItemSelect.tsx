@@ -10,7 +10,7 @@ type PropsType = {
   addonItems: Item[],
 }
 
-export default function ItemOptionOptionsInput({ name, addonItems } : PropsType) {
+export default function ItemSelect({ name, addonItems } : PropsType) {
 
   const {control} = useFormContext();
 

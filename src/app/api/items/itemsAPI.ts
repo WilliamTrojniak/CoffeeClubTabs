@@ -11,6 +11,7 @@ import { db } from "@/db/api/database";
 import { insertAndSetItemCategories, insertItemCategories } from "@/db/api/itemCategories";
 import { updateItemVariantCategories, updateItemVariantOptions, updateItemVariantsOptions } from "@/db/api/itemVariants";
 import { queryItemOptionCategories, updateItemOptionCategories, updateItemOptions, updateItemOptionsOptions } from "@/db/api/itemOptions";
+import { updateItemAddons } from "@/db/api/itemAddons";
 
 const ItemUpdateSchema = z.object({
   item: itemInsertSchema,
@@ -39,6 +40,7 @@ const ItemUpdateSchema = z.object({
       return accumulator;
     }, {categories: [], options: [], enabled: []})
   ),
+  itemAddons: itemSchema.array(),
 });
 
 export type ItemUpdateData = z.input<typeof ItemUpdateSchema>;
@@ -85,6 +87,8 @@ export async function updateItem(data: ItemUpdateData) {
 
         const itemOptionsData = await updateItemOptions(tx, parsed.data.item.shopId, itemData.id, itemOptionCategoriesData.filter((_, index) => parsed.data.itemOptions.enabled[index]).map(entry => entry.id));
       });
+
+      await updateItemAddons(tx, parsed.data.item.shopId, itemData.id, parsed.data.itemAddons.map(item => item.id));
 
       return itemData;
     });

@@ -294,4 +294,3 @@ export type ItemOptionCategoryInsert = z.infer<typeof itemOptionCategoryInsertSc
 
 export const itemOptionCategorySchema = createSelectSchema(itemOptionCategories);
 export type ItemOptionCategory = z.infer<typeof itemOptionCategorySchema>;
-
