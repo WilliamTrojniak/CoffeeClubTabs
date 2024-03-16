@@ -48,9 +48,6 @@ export const queryOptionItems = cache(async (tx: DBTransaction, shopId: number) 
 export const queryItemById = cache(async (tx: DBTransaction, itemId: number) => {
   const result = await tx.query.items.findFirst({
     where: eq(items.id, itemId),
-    columns: {
-      shopId: false,
-    },
     with: {
       shop: {
         columns : {
@@ -72,16 +69,11 @@ export const queryItemById = cache(async (tx: DBTransaction, itemId: number) => 
         columns: {},
         with: { 
           optionCategory: {
-            columns: {
-              shopId: false
-            },
             with: {
               itemOptionCategoryOptions: {
                 columns: {},
                 with: {
-                  optionItem: {
-                    columns: {shopId: false},
-                  }
+                  optionItem: true, 
                 }
               }
             }

@@ -30,7 +30,6 @@ export async function insertItemCategories(tx: DBTransaction, data: ItemCategori
 }
 
 export async function setItemCategories(tx: DBTransaction, itemId: number, itemCategoryIds: number[], shopId: number) {
-  if (itemCategoryIds.length === 0) return null;
 
   const linkData = itemCategoryIds.map(id => ({itemId, itemCategoryId: id, shopId}));
   await tx.transaction(async subtx => {
@@ -40,14 +39,21 @@ export async function setItemCategories(tx: DBTransaction, itemId: number, itemC
       await subtx.insert(itemToCategories).values(linkData).onConflictDoNothing();
 
     // Next, delete any item categories no longer associated with the item
-    await subtx.delete(itemToCategories).where(and(
-      eq(itemToCategories.shopId, shopId),
-      eq(itemToCategories.itemId, itemId),
-      notInArray(itemToCategories.itemCategoryId, itemCategoryIds)
-    )); 
+    if (itemCategoryIds.length > 0) 
+      await subtx.delete(itemToCategories).where(and(
+        eq(itemToCategories.shopId, shopId),
+        eq(itemToCategories.itemId, itemId),
+        notInArray(itemToCategories.itemCategoryId, itemCategoryIds)
+      )); 
+    else
+      await subtx.delete(itemToCategories).where(and(
+        eq(itemToCategories.shopId, shopId),
+        eq(itemToCategories.itemId, itemId),
+      )); 
+      
 
     // Finally remove any item categories that no longer have any references
-    await subtx.execute(sql`delete * from ${itemCategories} left join ${itemToCategories} on ${itemCategories.id} = ${itemToCategories.itemCategoryId} where ${itemToCategories.itemCategoryId} is null`);
+    await subtx.execute(sql`DELETE FROM ${itemCategories} WHERE NOT EXISTS (SELECT FROM ${itemToCategories} WHERE ${itemToCategories.itemCategoryId} = ${itemCategories.id})`);
   });
 }
 

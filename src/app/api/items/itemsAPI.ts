@@ -8,8 +8,8 @@ import { insertItem, insertItemOption, insertItemOptionCategory, insertItemOptio
 import { z } from "zod";
 import { modifyShop } from "../shops/shopsAPI";
 import { db } from "@/db/api/database";
-import { insertAndSetItemCategories, setItemCategories } from "@/db/api/itemCategories";
-import { createAndSetItemCategories } from "./itemCategoriesAPI";
+import { insertAndSetItemCategories } from "@/db/api/itemCategories";
+import { revalidatePath } from "next/cache";
 
 export type ItemUpdateData = {
   item: ItemInsert,
@@ -31,11 +31,15 @@ export async function updateItem(data: ItemUpdateData) {
 
   console.log(parsed.data.item);
   
-  return await db.transaction(async tx => {
+  const result = await db.transaction(async tx => {
     const itemResult = await modifyShop(tx, parsed.data.item.shopId, () => insertItem(tx, parsed.data.item));
     if (itemResult.status !== 200) return itemResult;
     const itemCategoriesResult = await insertAndSetItemCategories(tx, itemResult.data.id, parsed.data.itemCategories, parsed.data.item.shopId);
   });
+
+  revalidatePath(`/shops/${parsed.data.item.shopId}`)
+
+  return result;
 }
 
 
