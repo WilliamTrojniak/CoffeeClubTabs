@@ -1,22 +1,24 @@
 'use client'
 
 import { ItemUpdateData, updateItem } from "@/app/api/items/itemsAPI";
-import { ItemCategory } from "@/db/schema/items";
+import { Item, ItemCategory, ItemOptionCategory, itemCategories } from "@/db/schema/items";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
 import ItemCreateCategoryForm from "./ItemCreateCategoryForm";
 import { queryItemById } from "@/db/api/items";
 import ItemVariantsInput from "./ItemVariantForm/ItemVariantsInput";
-import { useEffect } from "react";
+import ItemOptionsInput from "./ItemOptionInput/ItemOptionsInput";
 
 type PropsType = {
   shopId: number,
   item?: Awaited<ReturnType<typeof queryItemById>>,
   shopItemCategories: ItemCategory[],
+  shopItemOptionCategories: (ItemOptionCategory & {options: Item[]})[],
+  addonItems: Item[],
 }
 
 
-export default function ItemCreateForm({shopId, item, shopItemCategories}: PropsType) {
+export default function ItemCreateForm({shopId, item, shopItemCategories, shopItemOptionCategories, addonItems}: PropsType) {
 
   const methods = useForm<ItemUpdateData>({
     defaultValues: {
@@ -28,6 +30,7 @@ export default function ItemCreateForm({shopId, item, shopItemCategories}: Props
       },
       itemCategories: item?.categories.map(category => category.category) ?? [],
       itemVariants: item?.variants ?? [],
+      itemOptions: shopItemOptionCategories.map(category => ({...category, enabled: item?.options.find(itemCategory => itemCategory.optionCategory.id === category.id) ? true : false})) ?? [],
     },
     // TODO Add a resolver
   });
@@ -53,6 +56,7 @@ export default function ItemCreateForm({shopId, item, shopItemCategories}: Props
         </label>
         <ItemCreateCategoryForm name="itemCategories" shopId={shopId} categoryOptions={shopItemCategories}/>
         <ItemVariantsInput name="itemVariants" itemId={item?.id}/>
+        <ItemOptionsInput name="itemOptions" itemId={item?.id} addonItems={addonItems}/>
         <button>Submit</button>
       </form>
     </FormProvider>

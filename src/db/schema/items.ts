@@ -3,7 +3,6 @@ import { shops } from "./shops";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
-import { relative } from "path";
 
 export const itemCategories = pgTable('item_categories', {
   id: serial('id').primaryKey(),
@@ -145,8 +144,8 @@ export const itemOptionCategories = pgTable('item_option_categories', {
 
 export const itemOptionCategoriesRelations = relations(itemOptionCategories, ({many}) => {
   return {
-    itemOptionCategoryOptions: many(itemOptionCategoryOptions),
-    itemOptions: many(itemOptions),
+    options: many(itemOptionCategoryOptions),
+    parentItems: many(itemOptions),
   }
 
 })
@@ -290,5 +289,9 @@ export type ItemVariant = z.infer<typeof itemVariantSchema>;
 
 export const itemOptionCategoryInsertSchema = createInsertSchema(itemOptionCategories, {
   name: z.string().trim().min(1).max(127),
-});
+}).omit({shopId: true});
 export type ItemOptionCategoryInsert = z.infer<typeof itemOptionCategoryInsertSchema>;
+
+export const itemOptionCategorySchema = createSelectSchema(itemOptionCategories);
+export type ItemOptionCategory = z.infer<typeof itemOptionCategorySchema>;
+

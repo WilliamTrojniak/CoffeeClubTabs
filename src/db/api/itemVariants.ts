@@ -74,6 +74,10 @@ export async function updateItemVariantsOptions(tx: DBTransaction, data: ItemVar
       notInArray(itemVariants.id, result.map(v => v.id)),
       inArray(itemVariants.categoryId, categoryIds)
     ));
+  } else if (categoryIds.length > 0) {
+    await tx.delete(itemVariants).where(
+      inArray(itemVariants.categoryId, categoryIds)
+    );
   }
 
   return result;

@@ -35,7 +35,7 @@ export const queryOptionItems = cache(async (tx: DBTransaction, shopId: number) 
   const addonCountSq = tx.select({addonCount: count(itemAddons.parentItemId).as('addonCount'), itemId: itemAddons.parentItemId}).from(itemAddons).groupBy(itemAddons.parentItemId).as('addonCountSq');
 
 
-  const result = await tx.select({id: items.id, name: items.name, shopId: items.shopId}).from(items)
+  const result = await tx.select({id: items.id, name: items.name, shopId: items.shopId, basePrice: items.basePrice}).from(items)
                                   .leftJoin(variantCountSq, eq(items.id, variantCountSq.itemId))
                                   .leftJoin(optionCountSq, eq(items.id, optionCountSq.itemId))
                                   .leftJoin(addonCountSq, eq(items.id, optionCountSq.itemId))
@@ -70,7 +70,7 @@ export const queryItemById = cache(async (tx: DBTransaction, itemId: number) => 
         with: { 
           optionCategory: {
             with: {
-              itemOptionCategoryOptions: {
+              options: {
                 columns: {},
                 with: {
                   optionItem: true, 
@@ -95,56 +95,6 @@ export const queryItemById = cache(async (tx: DBTransaction, itemId: number) => 
   if (!result) return null; // Undefined -> null for consistency
   return result;
 });
-
-export async function insertItemOptionCategory(tx: DBTransaction, data: ItemOptionCategoryInsert) {
-  const result = await tx.insert(itemOptionCategories).values(data).returning();
-  if (result.length === 0) return null;
-  return result[0];
-}
-
-export const queryItemOptionCategories = cache(async (tx: DBTransaction, shopId: number) => {
-  const result = await tx.query.itemOptionCategories.findMany({
-    where: eq(itemOptionCategories.shopId, shopId),
-    with: {
-      itemOptionCategoryOptions: {
-        columns: {},
-        with: {
-          optionItem: true,
-        }
-      }
-    }
-  });
-
-  return result;
-});
-
-export async function insertItemOptionCategoryOptions(tx: DBTransaction, optionCategoryId: number, itemIds: number[], shopId: number) {
-  const result = await tx.insert(itemOptionCategoryOptions).values(itemIds.map(itemId => ({optionCategoryId, shopId, optionItemId: itemId}))).returning();
-  
-  if(result.length === 0) return null;
-
-  return result;
-}
-
-export async function removeItemOptionCategoryOptions(tx: DBTransaction, optionCategoryId: number, itemIds: number[], shopId: number) {
-  const result = await tx.delete(itemOptionCategoryOptions).where(and(eq(itemOptionCategoryOptions.shopId, shopId), eq(itemOptionCategoryOptions.optionCategoryId, optionCategoryId), inArray(itemOptionCategoryOptions.optionItemId, itemIds))).returning();
-  return result;
-}
-
-export async function insertItemOption(tx: DBTransaction, itemId: number, optionCategoryId: number, shopId: number) {
-  const result = await tx.insert(itemOptions).values({parentItemId: itemId, optionCategoryId, shopId}).returning();
-  return result;
-}
-
-export async function removeItemOption(tx: DBTransaction, itemId: number, optionCategoryId: number, shopId: number) {
-  const result = await tx.delete(itemOptions).where(and(eq(itemOptions.shopId, shopId), eq(itemOptions.optionCategoryId, optionCategoryId), eq(itemOptions.parentItemId, itemId))).returning();
-  return result;
-}
-
-export async function removeItemOptionCategory(tx: DBTransaction, optionCategoryId: number, shopId: number) {
-  const result = await tx.delete(itemOptionCategories).where(and(eq(itemOptionCategories.id, optionCategoryId), eq(itemOptionCategories.shopId, shopId))).returning();
-  return result;
-}
 
 
 
