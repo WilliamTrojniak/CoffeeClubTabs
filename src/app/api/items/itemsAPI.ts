@@ -2,7 +2,7 @@
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { Item, ItemOptionCategoryInsert, ItemVariantCategoryInsert, ItemVariantInsert, itemCategoriesInsertSchema, itemInsertSchema, itemOptionCategoryInsertSchema, itemSchema, itemVariantCategoryInsertSchema, itemVariantInsertSchema } from "@/db/schema/items";
+import { Item, ItemOptionCategoryInsert, ItemVariantCategoryInsert, ItemVariantInsert, itemCategoriesInsertSchema, itemInsertSchema, itemOptionCategoryInsertSchema, itemOptions, itemSchema, itemVariantCategoryInsertSchema, itemVariantInsertSchema, itemVariants } from "@/db/schema/items";
 import { Response, clientFormattingErrorResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "../responses";
 import { insertItem, queryItemById, queryItemsByShop, queryOptionItems } from "@/db/api/items";
 import { z } from "zod";
@@ -12,49 +12,44 @@ import { insertAndSetItemCategories } from "@/db/api/itemCategories";
 import { updateItemVariantCategories, updateItemVariantsOptions } from "@/db/api/itemVariants";
 import { queryItemOptionCategories, updateItemOptionCategories, updateItemOptions, updateItemOptionsOptions } from "@/db/api/itemOptions";
 import { updateItemAddons } from "@/db/api/itemAddons";
+import { ItemUpdateSchema } from "./schema";
 
-const ItemUpdateSchema = z.object({
-  shopId: z.number().int().min(1),
-  item: itemInsertSchema,
-  itemCategories: itemCategoriesInsertSchema.array(),
-  itemVariants: itemVariantCategoryInsertSchema.merge(z.object({variantOptions: itemVariantInsertSchema.array()})).array().transform(
-    itemVariantArr => {
-      return itemVariantArr.reduce<{categories: ItemVariantCategoryInsert[], options: ItemVariantInsert[][]}>((accumulator, itemVariant) => {
-        accumulator.categories.push({
-          id: itemVariant.id, 
-          index: itemVariant.index, 
-          name: itemVariant.name,
-        });
-        accumulator.options.push(itemVariant.variantOptions);
-        return accumulator;
-      }, {categories: [], options: []})
-    }
-  ),
-  itemOptions: itemOptionCategoryInsertSchema.merge(z.object({options: itemSchema.array(), enabled: z.boolean()})).array().transform(
+
+export type ItemUpdateData = z.input<typeof ItemUpdateSchema>;
+
+export async function updateItem(data: ItemUpdateData) {
+
+  const ItemUpdateSchemaTransforms = ItemUpdateSchema.extend({
+    itemVariants: ItemUpdateSchema.shape.itemVariants.transform(
+      itemVariantArr => {
+        return itemVariantArr.reduce<{categories: ItemVariantCategoryInsert[], options: ItemVariantInsert[][]}>((accumulator, itemVariant) => {
+          accumulator.categories.push({
+            id: itemVariant.id, 
+            index: itemVariant.index, 
+            name: itemVariant.name,
+          });
+          accumulator.options.push(itemVariant.variantOptions);
+          return accumulator;
+        }, {categories: [], options: []})
+      }),
+   itemOptions: ItemUpdateSchema.shape.itemOptions.transform(
     itemOptionsArr => itemOptionsArr.reduce<{categories: ItemOptionCategoryInsert[], options: number[][], enabled: boolean[]}>((accumulator, itemOption) => {
       accumulator.categories.push({
         id: itemOption.id,
         name: itemOption.name
       });
       accumulator.options.push(itemOption.options.map(optionItem => optionItem.id));
-      accumulator.enabled.push(itemOption.enabled);
-      return accumulator;
-    }, {categories: [], options: [], enabled: []})
-  ),
-  itemAddons: itemSchema.array(),
-});
+        accumulator.enabled.push(itemOption.enabled);
+        return accumulator;
+      }, {categories: [], options: [], enabled: []})
+    ), 
+  });
 
-export type ItemUpdateData = z.input<typeof ItemUpdateSchema>;
-
-export async function updateItem(data: ItemUpdateData) {
-
-  const parsed = ItemUpdateSchema.safeParse(data);
+  const parsed = ItemUpdateSchemaTransforms.safeParse(data);
 
   if(!parsed.success)
     return clientFormattingErrorResponse(parsed.error.format());
 
-  console.log(parsed.data);
-  
   const result = await db.transaction(async tx => {
     return await modifyShop(tx, parsed.data.shopId, async (tx, shopId) => {
       // TODO Fix authorization

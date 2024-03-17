@@ -1,12 +1,12 @@
 'use client'
 
 import { Item } from "@/db/schema/items"
-import { Controller, useFormContext } from "react-hook-form"
+import { Controller, FieldPath, FieldValues, useFormContext } from "react-hook-form"
 import ReactSelect from "react-select";
 
 
 type PropsType = {
-  name: string,
+  name: FieldPath<FieldValues>,
   addonItems: Item[],
 }
 
@@ -24,7 +24,7 @@ export default function ItemSelect({ name, addonItems } : PropsType) {
         isMulti
         placeholder={"Add options..."}
         options={addonItems}
-        getOptionLabel={(option) => option.name }
+        getOptionLabel={(option) => option.name}
         getOptionValue={(option) => option.name}
       />}
     />

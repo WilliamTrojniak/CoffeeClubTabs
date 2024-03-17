@@ -2,18 +2,17 @@
 
 import { useFieldArray, useFormContext } from "react-hook-form"
 import ItemVariantOptionsInput from "./ItemVariantOptionsInput";
+import { ItemUpdateData } from "@/app/api/items/itemsAPI";
 
 type PropsType = {
-  name: string,
-  itemId?: number,
 }
 
 
-export default function ItemVariantsInput({name, itemId}: PropsType) {
-  const {control, register} = useFormContext();
+export default function ItemVariantsInput({}: PropsType) {
+  const {control, register, formState: {errors}} = useFormContext<ItemUpdateData>();
   const {fields, append, remove, swap } = useFieldArray({
     control,
-    name,
+    name: 'itemVariants',
     keyName: "key"
   });
 
@@ -23,14 +22,15 @@ export default function ItemVariantsInput({name, itemId}: PropsType) {
         {fields.map((item, index) => {
           return (
             <li key={item.key}>
-              <input {...register(`${name}[${index}].name`)}/>
+              <input {...register(`itemVariants.${index}.name`)}/>
               <button type="button" onClick={() => swap(index, index < fields.length - 1 ? index + 1 : index )}>V</button>
-              <ItemVariantOptionsInput name={`${name}[${index}].variantOptions`} itemId={itemId}/>
+              {errors.itemVariants?.[index]?.name && <p>{errors.itemVariants[index]?.name?.message}</p>}
+              <ItemVariantOptionsInput index={index}/>
             </li>
           )
         })}
       </ul>
-      <button type="button" onClick={() => append({name: "", parentItemId: itemId, variants: []})}>Append</button>
+      <button type="button" onClick={() => append({name: "", variantOptions: []})}>Append</button>
     </>
   );
 }

@@ -9,6 +9,7 @@ import { queryItemById } from "@/db/api/items";
 import ItemVariantsInput from "./ItemVariantForm/ItemVariantsInput";
 import ItemOptionsInput from "./ItemOptionInput/ItemOptionsInput";
 import ItemSelect from "../ItemSelect/ItemSelect";
+import { ItemUpdateSchema } from "@/app/api/items/schema";
 
 type PropsType = {
   shopId: number,
@@ -34,9 +35,10 @@ export default function ItemCreateForm({shopId, item, shopItemCategories, shopIt
       itemOptions: shopItemOptionCategories.map(category => ({...category, enabled: item?.options.find(itemCategory => itemCategory.optionCategory.id === category.id) ? true : false})) ?? [],
       itemAddons: item?.addons.map(entry => entry.addonItem) ?? [], // TODO Fill in
     },
+    resolver: zodResolver(ItemUpdateSchema),
     // TODO Add a resolver
   });
-  const {register, handleSubmit } = methods;
+  const {register, handleSubmit, formState: {errors} } = methods;
 
   return (
     <FormProvider {...methods}>
@@ -44,20 +46,21 @@ export default function ItemCreateForm({shopId, item, shopItemCategories, shopIt
         console.log(formData);
         console.log(await updateItem(formData));
       })}>  
-        <input type="hidden" {...register("shopId")} defaultValue={shopId}/>
         <label>
           Item Name
           <input type="text" {...register("item.name")} defaultValue={item?.name}/>
+          {errors.item?.name && <p>{ errors.item.name.message }</p> }
         </label>
         <label>
           Item Base Price
           <input type="text" {...register("item.basePrice", {
             valueAsNumber: true,
           })} defaultValue={item?.basePrice} />
+          {errors.item?.basePrice && <p>{ errors.item.basePrice.message }</p> }
         </label>
         <ItemCreateCategoryForm name="itemCategories" categoryOptions={shopItemCategories}/>
-        <ItemVariantsInput name="itemVariants" itemId={item?.id}/>
-        <ItemOptionsInput name="itemOptions" itemId={item?.id} addonItems={addonItems}/>
+        <ItemVariantsInput />
+        <ItemOptionsInput addonItems={addonItems}/>
         <ItemSelect name="itemAddons" addonItems={addonItems}/>
         <button>Submit</button>
       </form>
