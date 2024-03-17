@@ -5,17 +5,13 @@ import { and, count, eq, inArray, isNull, sql } from "drizzle-orm";
 import { cache } from "react";
 
 
-export async function insertItem(tx: DBTransaction, data: ItemInsert) {
-  const result = await tx.insert(items).values({
-    ...data,
-    basePrice: parseFloat(data.basePrice.toFixed(2))
-  }).onConflictDoUpdate({
-    target: items.id,
-    set: {
+export async function insertItem(tx: DBTransaction, shopId: number, itemData: ItemInsert) {
+  const result = await tx.insert(items).values({...itemData, shopId }).onConflictDoUpdate({
+    target: [items.shopId, items.id],
+    set: { // TODO Make dynamic
       name: sql`excluded.name`,
       basePrice: sql`excluded.base_price`,
     },
-    where: eq(items.shopId, data.shopId)
   }).returning();
 
   if (result.length !== 1) return null;
@@ -23,16 +19,17 @@ export async function insertItem(tx: DBTransaction, data: ItemInsert) {
 }
 
 export const queryItemsByShop = cache(async (tx: DBTransaction, shopId: number) => {
-  const result = await tx.query.items.findMany({
-    where: eq(items.shopId, shopId),
-  });
+  const result = await tx.select().from(items).where(
+    eq(items.shopId, shopId),
+  );
+
   return result;
 });
 
 export const queryOptionItems = cache(async (tx: DBTransaction, shopId: number) => {
-  const variantCountSq = tx.select({variantCount: count(itemVariantCategories.parentItemId).as('varCount'), itemId: itemVariantCategories.parentItemId}).from(itemVariantCategories).groupBy(itemVariantCategories.parentItemId).as('varCountSq');
-  const optionCountSq = tx.select({optionCount: count(itemOptions.parentItemId).as('optionCount'), itemId: itemOptions.parentItemId}).from(itemOptions).groupBy(itemOptions.parentItemId).as('optionCountSq');
-  const addonCountSq = tx.select({addonCount: count(itemAddons.parentItemId).as('addonCount'), itemId: itemAddons.parentItemId}).from(itemAddons).groupBy(itemAddons.parentItemId).as('addonCountSq');
+  const variantCountSq = tx.select({variantCount: count(itemVariantCategories.itemId).as('varCount'), itemId: itemVariantCategories.itemId}).from(itemVariantCategories).groupBy(itemVariantCategories.itemId).as('varCountSq');
+  const optionCountSq = tx.select({optionCount: count(itemOptions.itemId).as('optionCount'), itemId: itemOptions.itemId}).from(itemOptions).groupBy(itemOptions.itemId).as('optionCountSq');
+  const addonCountSq = tx.select({addonCount: count(itemAddons.itemId).as('addonCount'), itemId: itemAddons.itemId}).from(itemAddons).groupBy(itemAddons.itemId).as('addonCountSq');
 
 
   const result = await tx.select({id: items.id, name: items.name, shopId: items.shopId, basePrice: items.basePrice}).from(items)
@@ -82,7 +79,7 @@ export const queryItemById = cache(async (tx: DBTransaction, itemId: number) => 
       },
       variants: { 
         columns: {
-          parentItemId: false
+          itemId: false
         },
         with: {
           variantOptions: {

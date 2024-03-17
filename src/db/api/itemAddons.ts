@@ -1,26 +1,29 @@
-import { and, eq, notInArray } from "drizzle-orm";
+import { and, eq, notInArray, sql } from "drizzle-orm";
 import { itemAddons } from "../schema/items";
 import { DBTransaction } from "./database";
 
-export async function updateItemAddons(tx: DBTransaction, shopId: number, parentItemId: number, addonItemIds: number[]) {
+export async function updateItemAddons(tx: DBTransaction, shopId: number, itemId: number, addonIds: number[]) {
 
-  const result = addonItemIds.length > 0 ? await tx.insert(itemAddons).values(addonItemIds.map(addonItemId => ({addonItemId, parentItemId, shopId}))).onConflictDoUpdate({
-    target: [itemAddons.addonItemId, itemAddons.parentItemId],
-    set: {shopId},
-    where: eq(itemAddons.shopId, shopId),
+  const result = addonIds.length > 0 ? await tx.insert(itemAddons).values(addonIds.map(addonId => ({addonId, shopId, itemId}))).onConflictDoUpdate({
+    target: [itemAddons.shopId, itemAddons.itemId, itemAddons.addonId],
+    set:  {
+      index: sql`excluded.index`,
+    }
   }).returning() : [];
 
-  if(result.length > 0) {
+  const toKeep = result.map(entry => entry.id);
+  if(toKeep.length > 0) {
     await tx.delete(itemAddons).where(and(
-      notInArray(itemAddons.addonItemId, result.map(option => option.addonItemId)),
-      eq(itemAddons.parentItemId, parentItemId),
-      eq(itemAddons.shopId, shopId)
+      eq(itemAddons.shopId, shopId),
+      eq(itemAddons.itemId, itemId),
+      notInArray(itemAddons.addonId, toKeep),
     ));
   } else {
     await tx.delete(itemAddons).where(and(
-      eq(itemAddons.parentItemId, parentItemId),
-      eq(itemAddons.shopId, shopId)
+      eq(itemAddons.shopId, shopId),
+      eq(itemAddons.itemId, itemId)
     ));
   }
 
+  return result;
 }

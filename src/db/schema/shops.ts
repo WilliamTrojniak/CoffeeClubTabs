@@ -1,9 +1,9 @@
-import { integer, pgTable, serial, text, unique, varchar } from "drizzle-orm/pg-core";
+import { foreignKey, integer, pgTable, primaryKey, serial, text, unique, varchar } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
-import { itemCategories, itemVariantCategories } from "./items";
+import { itemCategories } from "./items";
 
 export const shops = pgTable('shops', {
   id: serial('id').primaryKey(),
@@ -27,11 +27,16 @@ export const shopsRelations = relations(shops, ({one, many}) => {
 });
 
 export const paymentOptions = pgTable('payment_options', {
-  id: serial('id').primaryKey(),
-  shopId: integer('shop_id').references(() => shops.id).notNull(),
+  shopId: integer('shop_id').notNull(),
+  id: serial('id').notNull(),
   name: varchar('name', {length: 255}).notNull(),
 }, table => {
     return {
+      pk: primaryKey({columns:[table.shopId, table.id]}),
+      shop_fk: foreignKey({
+        columns: [table.shopId],
+        foreignColumns: [shops.id],
+      }),
       unq: unique().on(table.shopId, table.name), // Shops payment option name must be unique to the shop
     }
 });
@@ -46,7 +51,7 @@ export const paymentOptionsRelations = relations(paymentOptions, ({one}) => {
 });
 
 export const shopInsertSchema = createInsertSchema(shops, {
-  name: z.string().nonempty().max(255),
+  name: z.string().min(1).max(255),
 });
 export type ShopInsert = z.infer<typeof shopInsertSchema>;
 
@@ -55,7 +60,7 @@ export type Shop = z.infer<typeof shopSelectSchema>;
 
 
 export const shopPaymentOptionInsertSchema = createInsertSchema(paymentOptions, {
-  name: z.string().nonempty().max(255),
+  name: z.string().min(1).max(255),
 });
 export type ShopPaymentOptionInsertData = z.infer<typeof shopPaymentOptionInsertSchema>;
 

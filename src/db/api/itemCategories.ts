@@ -22,29 +22,40 @@ export const queryItemCategoriesByShopId = cache(async (tx: DBTransaction, shopI
   return result;
 });
 
-export async function insertItemCategories(tx: DBTransaction, data: ItemCategoriesInsert[]) {
-  if (data.length === 0) return [];
-  const result = await tx.insert(itemCategories).values(data).onConflictDoNothing().returning();
+export async function insertItemCategories(tx: DBTransaction, shopId: number, categoryData: ItemCategoriesInsert[]) {
+  if (categoryData.length === 0) return [];
+  const result = await tx.insert(itemCategories).values(categoryData.map(category => ({...category, shopId}))).onConflictDoUpdate({
+    target: [itemCategories.shopId, itemCategories.id],
+    set: {
+      name: sql`excluded.name`,
+      index: sql`excluded.index`,
+    }
+  }).returning();
 
   return result;
 }
 
-export async function setItemCategories(tx: DBTransaction, itemId: number, itemCategoryIds: number[], shopId: number) {
+export async function setItemCategories(tx: DBTransaction, shopId: number, itemId: number, categoryIds: number[]) {
 
-  const linkData = itemCategoryIds.map(id => ({itemId, itemCategoryId: id, shopId}));
+  const linkData = categoryIds.map(categoryId => ({shopId, itemId, categoryId}));
   await tx.transaction(async subtx => {
 
     // First, add any new item categories to the item
-    if(linkData.length > 0)
-      await subtx.insert(itemToCategories).values(linkData).onConflictDoNothing();
+    const result = categoryIds.length > 0 ? await subtx.insert(itemToCategories).values(linkData).onConflictDoUpdate({
+      target: [itemToCategories.shopId, itemToCategories.itemId, itemToCategories.categoryId],
+      set: {
+        index: sql`excluded.index` // TODO Make dynamic
+      }
+    }).returning() : [];
 
     // Next, delete any item categories no longer associated with the item
-    if (itemCategoryIds.length > 0) 
-      await subtx.delete(itemToCategories).where(and(
+    if (categoryIds.length > 0) {
+     await subtx.delete(itemToCategories).where(and(
         eq(itemToCategories.shopId, shopId),
         eq(itemToCategories.itemId, itemId),
-        notInArray(itemToCategories.itemCategoryId, itemCategoryIds)
-      )); 
+        notInArray(itemToCategories.categoryId, categoryIds)
+      ));
+    } 
     else
       await subtx.delete(itemToCategories).where(and(
         eq(itemToCategories.shopId, shopId),
@@ -53,16 +64,13 @@ export async function setItemCategories(tx: DBTransaction, itemId: number, itemC
       
 
     // Finally remove any item categories that no longer have any references
-    await subtx.execute(sql`DELETE FROM ${itemCategories} WHERE NOT EXISTS (SELECT FROM ${itemToCategories} WHERE ${itemToCategories.itemCategoryId} = ${itemCategories.id})`);
+    await subtx.execute(sql`DELETE FROM ${itemCategories} WHERE NOT EXISTS (SELECT FROM ${itemToCategories} WHERE ${itemToCategories.categoryId} = ${itemCategories.id})`);
+    return result;
   });
 }
 
-export async function insertAndSetItemCategories(tx: DBTransaction, itemId: number, itemCategoryData: ItemCategoriesInsert[], shopId: number) {
-    const existingCategories = itemCategoryData.filter((i): i is ItemCategory => !!i.id);
-    const nonExistingCategories = itemCategoryData.filter(i => !i.id);
+export async function insertAndSetItemCategories(tx: DBTransaction, shopId: number, itemId: number, categoryData: ItemCategoriesInsert[]) {
+    const updatedCategories = await insertItemCategories(tx, shopId, categoryData); 
 
-    const newCategories = await insertItemCategories(tx, nonExistingCategories.map(i => ({...i, shopId}))) // Overwrite shopId
-
-    const toLink = newCategories ? newCategories.concat(existingCategories) : existingCategories;
-    await setItemCategories(tx, itemId, toLink.map(c => c.id), shopId);
+    await setItemCategories(tx, shopId, itemId, updatedCategories.map(c => c.id));
 }

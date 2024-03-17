@@ -19,21 +19,23 @@ export const queryItemOptionCategories = cache(async (tx: DBTransaction, shopId:
   return result;
 });
 
-export async function updateItemOptionCategories(tx: DBTransaction, OptionCategories: ItemOptionCategoryInsert[], shopId: number) {
+export async function updateItemOptionCategories(tx: DBTransaction, shopId: number, optionCategories: ItemOptionCategoryInsert[]) {
 
-  const result = await tx.insert(itemOptionCategories).values(OptionCategories.map(entry => ({...entry, shopId}))).onConflictDoUpdate({
-    target: itemOptionCategories.id,
-    set: {name: sql`excluded.name`}, // TODO Make dynamic
-    where: eq(itemOptionCategories.shopId, shopId)
-  }).returning();
+  const result = optionCategories.length > 0 ? await tx.insert(itemOptionCategories).values(optionCategories.map(category => ({...category, shopId}))).onConflictDoUpdate({
+    target: [itemOptionCategories.shopId, itemOptionCategories.id], 
+    set: {
+      name: sql`excluded.name`,
+      index: sql`excluded.index`,
+    }, // TODO Make dynamic
+  }).returning() : [];
 
 
   // Remove any options that were not included
   const toKeep = result.map(entry => entry.id);
   if(toKeep.length > 0) {
     await tx.delete(itemOptionCategories).where(and(
+      eq(itemOptionCategories.shopId, shopId),
       notInArray(itemOptionCategories.id, toKeep),
-      eq(itemOptionCategories.shopId, shopId)
     ));
   } else {
     await tx.delete(itemOptionCategories).where(
@@ -44,58 +46,59 @@ export async function updateItemOptionCategories(tx: DBTransaction, OptionCatego
 
 }
 
-export async function updateItemOptionsOptions(tx: DBTransaction, optionItemIds: number[][], optionCategoryIds: number[], shopId: number) {
+export async function updateItemOptionsOptions(tx: DBTransaction, shopId: number, optionCategoryIds: number[], optionItemIds: number[][]) {
   if(optionItemIds.length !== optionCategoryIds.length) throw new Error("Must provide category for all options");
 
-  const insertData = optionItemIds.flatMap((itemIds, index) => itemIds.map(optionItemId => ({optionItemId, optionCategoryId: optionCategoryIds[index], shopId})));
+  const insertData = optionItemIds.flatMap((itemIds, index) => itemIds.map(itemId => ({itemId, shopId, categoryId: optionCategoryIds[index]})));
 
   const result = insertData.length > 0 ? await tx.insert(itemOptionCategoryOptions).values(insertData).onConflictDoUpdate({
-    target: [itemOptionCategoryOptions.optionItemId, itemOptionCategoryOptions.optionCategoryId],
-    set: {shopId},
-    where: eq(itemOptionCategoryOptions.shopId, shopId)
+    target: [itemOptionCategoryOptions.shopId, itemOptionCategoryOptions.categoryId, itemOptionCategoryOptions.itemId],
+    set: { // TODO Make dynamic
+      index: sql`excluded.index`,
+    },
   }).returning() : [];
 
   // Remove any options that were not updated or inserted
-  for (let i = 0; i < optionItemIds.length; i++) {
-    const optionItems = optionItemIds[i];
-    const optionCategoryId = optionCategoryIds[i];
-    if(optionItems.length === 0) {
-      await tx.delete(itemOptionCategoryOptions).where(and(
-        eq(itemOptionCategoryOptions.optionCategoryId, optionCategoryId),
-        eq(itemOptionCategoryOptions.shopId, shopId),
-      ));
-    } else {
-      await tx.delete(itemOptionCategoryOptions).where(and(
-        notInArray(itemOptionCategoryOptions.optionItemId, optionItems),
-        eq(itemOptionCategoryOptions.optionCategoryId, optionCategoryId),
-        eq(itemOptionCategoryOptions.shopId, shopId)
-      ));
-    }
+  const toKeep = result.map(entry => entry.id);
+  if(toKeep.length > 0) {
+    await tx.delete(itemOptionCategoryOptions).where(and(
+      eq(itemOptionCategoryOptions.shopId, shopId),
+      inArray(itemOptionCategoryOptions.categoryId, optionCategoryIds),
+      notInArray(itemOptionCategoryOptions.id, toKeep),
+    ));
+  } else {
+    await tx.delete(itemOptionCategoryOptions).where(and(
+      eq(itemOptionCategoryOptions.shopId, shopId),
+      inArray(itemOptionCategoryOptions.categoryId, optionCategoryIds),
+    ));
   }
-   
 
   return result;
 }
 
-export async function updateItemOptions(tx: DBTransaction, shopId: number, parentItemId: number, optionCategoryIds: number[]) {
-  const result = optionCategoryIds.length > 0 ? await tx.insert(itemOptions).values(optionCategoryIds.map(optionCategoryId => ({optionCategoryId, parentItemId, shopId}))).onConflictDoUpdate({
-    target: [itemOptions.optionCategoryId, itemOptions.parentItemId],
-    set: {shopId},
-    where: eq(itemOptions.shopId, shopId),
+export async function updateItemOptions(tx: DBTransaction, shopId: number, itemId: number, optionIds: number[]) {
+  const result = optionIds.length > 0 ? await tx.insert(itemOptions).values(optionIds.map(optionId => ({optionId, shopId, itemId}))).onConflictDoUpdate({
+    target: [itemOptions.shopId, itemOptions.optionId, itemOptions.optionId],
+    set: { // TODO Make dynamic
+      index: sql`excluded.index`,
+    },
   }).returning() : [];
 
+  const toKeep = result.map(entry => entry.id);
   if(result.length > 0) {
     await tx.delete(itemOptions).where(and(
-      notInArray(itemOptions.optionCategoryId, result.map(option => option.optionCategoryId)),
-      eq(itemOptions.parentItemId, parentItemId),
-      eq(itemOptions.shopId, shopId)
+      eq(itemOptions.shopId, shopId),
+      eq(itemOptions.itemId, itemId),
+      notInArray(itemOptions.optionId, toKeep),
     ));
   } else {
     await tx.delete(itemOptions).where(and(
-      eq(itemOptions.parentItemId, parentItemId),
-      eq(itemOptions.shopId, shopId)
+      eq(itemOptions.shopId, shopId),
+      eq(itemOptions.itemId, itemId)
     ));
   }
+
+  return result;
 
 }
 
