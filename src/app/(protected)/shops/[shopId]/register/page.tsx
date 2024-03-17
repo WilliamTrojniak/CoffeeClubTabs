@@ -1,6 +1,5 @@
 import { getItemsByShopId } from "@/app/api/items/itemsAPI";
 import { getShopDetails } from "@/app/api/shops/shopsAPI";
-import ItemCreateForm from "@/components/ItemCreateForms/ItemCreateForm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 

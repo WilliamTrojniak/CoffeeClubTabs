@@ -1,6 +1,6 @@
 import { getAddonItems, getItemOptionCategoriesByShop } from "@/app/api/items/itemsAPI";
 import { getItemCategoriesByShopId } from "@/app/api/shops/shopsAPI";
-import ItemCreateForm from "@/components/ItemCreateForms/ItemCreateForm";
+import ItemForm from "@/components/ItemForm/ItemForm";
 import { notFound } from "next/navigation";
 
 export default async function ItemNewPage({params}: {params: {shopId: string}}) {
@@ -27,7 +27,7 @@ export default async function ItemNewPage({params}: {params: {shopId: string}}) 
   return (
     <>
       <h1>Create a new item</h1>
-      <ItemCreateForm shopId={shopId} shopItemCategories={shopItemCategories} shopItemOptionCategories={shopItemOptionCategories} addonItems={addonItems}/>
+      <ItemForm shopId={shopId} shopItemCategories={shopItemCategories} shopItemOptionCategories={shopItemOptionCategories} addonItems={addonItems}/>
 
 
     </>

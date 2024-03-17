@@ -2,7 +2,7 @@
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { Item, ItemOptionCategoryInsert, ItemVariantCategoryInsert, ItemVariantInsert, itemCategoriesInsertSchema, itemInsertSchema, itemOptionCategoryInsertSchema, itemOptions, itemSchema, itemVariantCategoryInsertSchema, itemVariantInsertSchema, itemVariants } from "@/db/schema/items";
+import { Item, ItemOptionCategoryInsert, ItemVariantCategoryInsert, ItemVariantInsert } from "@/db/schema/items";
 import { Response, clientFormattingErrorResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "../responses";
 import { insertItem, queryItemById, queryItemsByShop, queryOptionItems } from "@/db/api/items";
 import { z } from "zod";

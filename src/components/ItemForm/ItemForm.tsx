@@ -1,15 +1,15 @@
 'use client'
 
 import { ItemUpdateData, updateItem } from "@/app/api/items/itemsAPI";
-import { Item, ItemCategory, ItemOptionCategory, itemCategories } from "@/db/schema/items";
+import { Item, ItemCategory, ItemOptionCategory } from "@/db/schema/items";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
-import ItemCreateCategoryForm from "./ItemCreateCategoryForm";
 import { queryItemById } from "@/db/api/items";
-import ItemVariantsInput from "./ItemVariantForm/ItemVariantsInput";
 import ItemOptionsInput from "./ItemOptionInput/ItemOptionsInput";
 import ItemSelect from "../ItemSelect/ItemSelect";
 import { ItemUpdateSchema } from "@/app/api/items/schema";
+import ItemCategoriesInput from "./ItemCategoriesInput";
+import ItemVariantsInput from "./ItemVariantsInput/ItemVariantsInput";
 
 type PropsType = {
   shopId: number,
@@ -20,7 +20,7 @@ type PropsType = {
 }
 
 
-export default function ItemCreateForm({shopId, item, shopItemCategories, shopItemOptionCategories, addonItems}: PropsType) {
+export default function ItemForm({shopId, item, shopItemCategories, shopItemOptionCategories, addonItems}: PropsType) {
 
   const methods = useForm<ItemUpdateData>({
     defaultValues: {
@@ -58,7 +58,7 @@ export default function ItemCreateForm({shopId, item, shopItemCategories, shopIt
           })} defaultValue={item?.basePrice} />
           {errors.item?.basePrice && <p>{ errors.item.basePrice.message }</p> }
         </label>
-        <ItemCreateCategoryForm name="itemCategories" categoryOptions={shopItemCategories}/>
+        <ItemCategoriesInput name="itemCategories" categoryOptions={shopItemCategories}/>
         <ItemVariantsInput />
         <ItemOptionsInput addonItems={addonItems}/>
         <ItemSelect name="itemAddons" addonItems={addonItems}/>

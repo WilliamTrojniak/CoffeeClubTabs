@@ -1,6 +1,6 @@
 import { getAddonItems, getItemById, getItemOptionCategoriesByShop } from "@/app/api/items/itemsAPI";
 import { getItemCategoriesByShopId } from "@/app/api/shops/shopsAPI";
-import ItemCreateForm from "@/components/ItemCreateForms/ItemCreateForm";
+import ItemForm from "@/components/ItemForm/ItemForm";
 import { notFound } from "next/navigation";
 
 export default async function ItemPage({params}: {params: {itemId: string, shopId: string}}) {
@@ -32,9 +32,7 @@ export default async function ItemPage({params}: {params: {itemId: string, shopI
     <>
       <h1>Item Page for {itemDataResponse.data.name}</h1>
       <pre>{JSON.stringify(itemData)}</pre>
-      <ItemCreateForm shopId={shopId} item={itemData} shopItemCategories={shopItemCategories} shopItemOptionCategories={shopItemOptionCategories} addonItems={addonItems}/>
-
-
+      <ItemForm shopId={shopId} item={itemData} shopItemCategories={shopItemCategories} shopItemOptionCategories={shopItemOptionCategories} addonItems={addonItems}/>
     </>
   );
 }

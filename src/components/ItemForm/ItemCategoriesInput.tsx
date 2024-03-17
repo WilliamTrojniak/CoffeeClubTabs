@@ -10,7 +10,7 @@ type PropsType = {
   categoryOptions: ItemCategoriesInsert[]
 }
 
-export default function ItemCreateCategoryForm({name, categoryOptions}: PropsType) {
+export default function ItemCategoriesInput({name, categoryOptions}: PropsType) {
   
   const {control} = useFormContext();
 
