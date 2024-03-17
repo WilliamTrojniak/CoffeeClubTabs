@@ -7,17 +7,16 @@ import { useCallback } from "react";
 
 type PropsType = {
   name: string,
-  shopId: number,
   categoryOptions: ItemCategoriesInsert[]
 }
 
-export default function ItemCreateCategoryForm({name, shopId, categoryOptions}: PropsType) {
+export default function ItemCreateCategoryForm({name, categoryOptions}: PropsType) {
   
   const {control} = useFormContext();
 
   const createOption = useCallback((label: string) => {
-    return {shopId, name: label} satisfies ItemCategoriesInsert;
-  }, [shopId])
+    return {name: label} satisfies ItemCategoriesInsert;
+  }, [])
 
   return (
       <Controller

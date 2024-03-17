@@ -2,18 +2,19 @@
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { Item, ItemCategoriesInsert, ItemInsert, ItemOptionCategoryInsert, ItemVariantCategoryInsert, ItemVariantInsert, itemCategoriesInsertSchema, itemInsertSchema, itemOptionCategoryInsertSchema, itemOptionCategoryOptions, itemOptions, itemSchema, itemVariantCategories, itemVariantCategoryInsertSchema, itemVariantCategorySchema, itemVariantInsertSchema, itemVariants } from "@/db/schema/items";
+import { Item, ItemOptionCategoryInsert, ItemVariantCategoryInsert, ItemVariantInsert, itemCategoriesInsertSchema, itemInsertSchema, itemOptionCategoryInsertSchema, itemSchema, itemVariantCategoryInsertSchema, itemVariantInsertSchema } from "@/db/schema/items";
 import { Response, clientFormattingErrorResponse, generalClientSuccess, internalServerErrorReponse, notFoundResponse, unauthenticatedResponse, unauthorizedResponse } from "../responses";
 import { insertItem, queryItemById, queryItemsByShop, queryOptionItems } from "@/db/api/items";
 import { z } from "zod";
 import { modifyShop } from "../shops/shopsAPI";
 import { db } from "@/db/api/database";
-import { insertAndSetItemCategories, insertItemCategories } from "@/db/api/itemCategories";
-import { updateItemVariantCategories, updateItemVariantOptions, updateItemVariantsOptions } from "@/db/api/itemVariants";
+import { insertAndSetItemCategories } from "@/db/api/itemCategories";
+import { updateItemVariantCategories, updateItemVariantsOptions } from "@/db/api/itemVariants";
 import { queryItemOptionCategories, updateItemOptionCategories, updateItemOptions, updateItemOptionsOptions } from "@/db/api/itemOptions";
 import { updateItemAddons } from "@/db/api/itemAddons";
 
 const ItemUpdateSchema = z.object({
+  shopId: z.number().int().min(1),
   item: itemInsertSchema,
   itemCategories: itemCategoriesInsertSchema.array(),
   itemVariants: itemVariantCategoryInsertSchema.merge(z.object({variantOptions: itemVariantInsertSchema.array()})).array().transform(
@@ -55,40 +56,40 @@ export async function updateItem(data: ItemUpdateData) {
   console.log(parsed.data);
   
   const result = await db.transaction(async tx => {
-    return await modifyShop(tx, parsed.data.item.shopId, async (tx, shopId) => {
+    return await modifyShop(tx, parsed.data.shopId, async (tx, shopId) => {
       // TODO Fix authorization
-      const itemData = await insertItem(tx, parsed.data.item);
+      const itemData = await insertItem(tx, parsed.data.shopId, parsed.data.item);
       if (!itemData) {
         tx.rollback();
         return;
       }
       
-      const itemCategoriesData = await insertAndSetItemCategories(tx, itemData.id, parsed.data.itemCategories.map(data => ({...data, shopId})), parsed.data.item.shopId);
+      const itemCategoriesData = await insertAndSetItemCategories(tx, parsed.data.shopId, itemData.id, parsed.data.itemCategories.map(data => ({...data, shopId})));
 
       // Set item variant categories and add their options
       await tx.transaction(async tx => {
-        const itemVariantCategoriesData = await updateItemVariantCategories(tx, itemData.id, parsed.data.itemVariants.categories);
+        const itemVariantCategoriesData = await updateItemVariantCategories(tx, shopId, itemData.id, parsed.data.itemVariants.categories);
         if (itemVariantCategoriesData.length !== parsed.data.itemVariants.categories.length) {
           tx.rollback();
           return
         }
-        const itemVariantsData = await updateItemVariantsOptions(tx, parsed.data.itemVariants.options, itemVariantCategoriesData.map(cat => cat.id));
+        const itemVariantsData = await updateItemVariantsOptions(tx, shopId, itemData.id, itemVariantCategoriesData.map(cat => cat.id), parsed.data.itemVariants.options);
       });
 
 
       // Create item options and add them to the item
       await tx.transaction(async tx => {
-        const itemOptionCategoriesData = await updateItemOptionCategories(tx, parsed.data.itemOptions.categories, parsed.data.item.shopId);
+        const itemOptionCategoriesData = await updateItemOptionCategories(tx, shopId, parsed.data.itemOptions.categories);
         if (itemOptionCategoriesData.length !== parsed.data.itemOptions.categories.length) {
           tx.rollback();
           return;
         }
-        const itemOptionsOptionsData = await updateItemOptionsOptions(tx, parsed.data.itemOptions.options, itemOptionCategoriesData.map(entry => entry.id), parsed.data.item.shopId)
+        const itemOptionsOptionsData = await updateItemOptionsOptions(tx, shopId, itemOptionCategoriesData.map(entry => entry.id), parsed.data.itemOptions.options)
 
-        const itemOptionsData = await updateItemOptions(tx, parsed.data.item.shopId, itemData.id, itemOptionCategoriesData.filter((_, index) => parsed.data.itemOptions.enabled[index]).map(entry => entry.id));
+        const itemOptionsData = await updateItemOptions(tx, shopId, itemData.id, itemOptionCategoriesData.filter((_, index) => parsed.data.itemOptions.enabled[index]).map(entry => entry.id));
       });
 
-      await updateItemAddons(tx, parsed.data.item.shopId, itemData.id, parsed.data.itemAddons.map(item => item.id));
+      await updateItemAddons(tx, shopId, itemData.id, parsed.data.itemAddons.map(item => item.id));
 
       return itemData;
     });

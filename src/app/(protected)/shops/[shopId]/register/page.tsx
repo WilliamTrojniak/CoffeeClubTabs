@@ -25,7 +25,6 @@ export default async function RegisterPage({params}: {params: {shopId: string}})
   return (
     <>
       <h1>Register</h1>
-      <ItemCreateForm shopId={shopId}/> 
       <br/>
       {items}
     </>

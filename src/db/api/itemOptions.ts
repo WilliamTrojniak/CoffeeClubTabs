@@ -66,11 +66,16 @@ export async function updateItemOptionsOptions(tx: DBTransaction, shopId: number
       inArray(itemOptionCategoryOptions.categoryId, optionCategoryIds),
       notInArray(itemOptionCategoryOptions.id, toKeep),
     ));
-  } else {
+  } else if (optionCategoryIds.length > 0) {
     await tx.delete(itemOptionCategoryOptions).where(and(
       eq(itemOptionCategoryOptions.shopId, shopId),
       inArray(itemOptionCategoryOptions.categoryId, optionCategoryIds),
     ));
+  } else {
+    await tx.delete(itemOptionCategoryOptions).where(
+      eq(itemOptionCategoryOptions.shopId, shopId)
+    );
+
   }
 
   return result;

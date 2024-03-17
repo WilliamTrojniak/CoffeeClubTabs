@@ -23,10 +23,10 @@ export default function ItemCreateForm({shopId, item, shopItemCategories, shopIt
 
   const methods = useForm<ItemUpdateData>({
     defaultValues: {
+      shopId: shopId,
       item: {
         name: item?.name ?? "",
         basePrice: item?.basePrice ?? "" as unknown as number, 
-        shopId: shopId,
         id: item?.id,
       },
       itemCategories: item?.categories.map(category => category.category) ?? [],
@@ -44,8 +44,7 @@ export default function ItemCreateForm({shopId, item, shopItemCategories, shopIt
         console.log(formData);
         console.log(await updateItem(formData));
       })}>  
-        <input type="hidden" {...register("item.id")} defaultValue={item?.id}/>
-        <input type="hidden" {...register("item.shopId")} defaultValue={shopId}/>
+        <input type="hidden" {...register("shopId")} defaultValue={shopId}/>
         <label>
           Item Name
           <input type="text" {...register("item.name")} defaultValue={item?.name}/>
@@ -56,7 +55,7 @@ export default function ItemCreateForm({shopId, item, shopItemCategories, shopIt
             valueAsNumber: true,
           })} defaultValue={item?.basePrice} />
         </label>
-        <ItemCreateCategoryForm name="itemCategories" shopId={shopId} categoryOptions={shopItemCategories}/>
+        <ItemCreateCategoryForm name="itemCategories" categoryOptions={shopItemCategories}/>
         <ItemVariantsInput name="itemVariants" itemId={item?.id}/>
         <ItemOptionsInput name="itemOptions" itemId={item?.id} addonItems={addonItems}/>
         <ItemSelect name="itemAddons" addonItems={addonItems}/>

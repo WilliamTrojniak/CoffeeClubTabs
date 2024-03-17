@@ -21,7 +21,7 @@ export async function updateItemVariantCategories(tx: DBTransaction, shopId: num
       eq(itemVariantCategories.itemId, itemId),
       notInArray(itemVariantCategories.id, toKeep)));
   } else {
-    await tx.delete(itemVariants).where(and(
+    await tx.delete(itemVariantCategories).where(and(
       eq(itemVariantCategories.shopId, shopId),
       eq(itemVariantCategories.itemId, itemId)));
   }
@@ -58,12 +58,17 @@ export async function updateItemVariantsOptions(tx: DBTransaction, shopId: numbe
       inArray(itemVariants.categoryId, categoryIds),
       notInArray(itemVariants.id, toKeep),
     ));
-  } else {
+  } else if(categoryIds.length > 0) {
     await tx.delete(itemVariants).where(and(
       eq(itemVariants.shopId, shopId),
       eq(itemVariants.itemId, itemId),
       inArray(itemVariants.categoryId, categoryIds),
     ));
+  } else {
+    await tx.delete(itemVariants).where(and(
+      eq(itemVariants.shopId, shopId),
+      eq(itemVariants.itemId, itemId),
+    ))
   }
 
   return result;
