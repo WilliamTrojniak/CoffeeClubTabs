@@ -1,7 +1,7 @@
 import { DBTransaction } from "./database";
 import 'server-only'
-import { ItemInsert, ItemOptionCategoryInsert, itemAddons, itemOptionCategories, itemOptionCategoryOptions, itemOptions, itemVariantCategories, items } from "../schema/items";
-import { and, count, eq, inArray, isNull, sql } from "drizzle-orm";
+import { ItemInsert, ItemOptionCategoryInsert, itemAddons, itemOptionCategories, itemOptionCategoryOptions, itemOptions, itemToCategories, itemVariantCategories, items } from "../schema/items";
+import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { cache } from "react";
 
 
@@ -58,6 +58,7 @@ export const queryItemById = cache(async (tx: DBTransaction, itemId: number) => 
       },
       categories: {
         columns: {},
+        orderBy: [asc(itemToCategories.index)],
         with: {
           category: true,
         }

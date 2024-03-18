@@ -33,12 +33,11 @@ export default function ItemForm({shopId, item, shopItemCategories, shopItemOpti
       itemCategories: item?.categories.map(category => category.category) ?? [],
       itemVariants: item?.variants ?? [],
       itemOptions: shopItemOptionCategories.map(category => ({...category, enabled: item?.options.find(itemCategory => itemCategory.optionCategory.id === category.id) ? true : false})) ?? [],
-      itemAddons: item?.addons.map(entry => entry.addonItem) ?? [], // TODO Fill in
+      itemAddons: item?.addons.map(entry => entry.addonItem) ?? [], 
     },
     resolver: zodResolver(ItemUpdateSchema),
-    // TODO Add a resolver
   });
-  const {register, handleSubmit, formState: {errors} } = methods;
+  const {register, handleSubmit, reset, formState: {errors} } = methods;
 
   return (
     <FormProvider {...methods}>
@@ -62,6 +61,7 @@ export default function ItemForm({shopId, item, shopItemCategories, shopItemOpti
         <ItemVariantsInput />
         <ItemOptionsInput addonItems={addonItems}/>
         <ItemSelect name="itemAddons" addonItems={addonItems}/>
+        <button type="button" onClick={() => reset()}>Reset</button>
         <button>Submit</button>
       </form>
     </FormProvider>

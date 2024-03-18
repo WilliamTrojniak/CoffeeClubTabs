@@ -278,6 +278,9 @@ export type ItemCategoriesInsert = z.infer<typeof itemCategoriesInsertSchema>;
 export const itemCategorySchema = createSelectSchema(itemCategories);
 export type ItemCategory = z.infer<typeof itemCategorySchema>;
 
+export const itemToCategoriesInsertSchema = createInsertSchema(itemToCategories).omit({shopId: true, itemId: true});
+export type ItemToCategories = z.infer<typeof itemToCategoriesInsertSchema>;
+
 
 export const itemInsertSchema = createInsertSchema(items, {
   name: z.string().trim().min(1).max(127),

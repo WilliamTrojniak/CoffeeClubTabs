@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { ItemCategoriesInsert, ItemCategory, itemCategories, itemToCategories } from "../schema/items";
+import { ItemCategoriesInsert, ItemCategory, ItemToCategories, itemCategories, itemToCategories } from "../schema/items";
 import { DBTransaction } from "./database";
 import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 
@@ -35,9 +35,9 @@ export async function insertItemCategories(tx: DBTransaction, shopId: number, ca
   return result;
 }
 
-export async function setItemCategories(tx: DBTransaction, shopId: number, itemId: number, categoryIds: number[]) {
+export async function setItemCategories(tx: DBTransaction, shopId: number, itemId: number, categoryIds: ItemToCategories[]) {
 
-  const linkData = categoryIds.map(categoryId => ({shopId, itemId, categoryId}));
+  const linkData = categoryIds.map(categoryId => ({...categoryId, shopId, itemId}));
   await tx.transaction(async subtx => {
 
     // First, add any new item categories to the item
@@ -53,7 +53,7 @@ export async function setItemCategories(tx: DBTransaction, shopId: number, itemI
      await subtx.delete(itemToCategories).where(and(
         eq(itemToCategories.shopId, shopId),
         eq(itemToCategories.itemId, itemId),
-        notInArray(itemToCategories.categoryId, categoryIds)
+        notInArray(itemToCategories.categoryId, categoryIds.map(e => e.categoryId))
       ));
     } 
     else
@@ -72,5 +72,5 @@ export async function setItemCategories(tx: DBTransaction, shopId: number, itemI
 export async function insertAndSetItemCategories(tx: DBTransaction, shopId: number, itemId: number, categoryData: ItemCategoriesInsert[]) {
     const updatedCategories = await insertItemCategories(tx, shopId, categoryData); 
 
-    await setItemCategories(tx, shopId, itemId, updatedCategories.map(c => c.id));
+    await setItemCategories(tx, shopId, itemId, updatedCategories.map(({id}, index) => ({categoryId: id, index})));
 }

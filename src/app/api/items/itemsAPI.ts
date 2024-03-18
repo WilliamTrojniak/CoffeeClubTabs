@@ -59,7 +59,7 @@ export async function updateItem(data: ItemUpdateData) {
         return;
       }
       
-      const itemCategoriesData = await insertAndSetItemCategories(tx, parsed.data.shopId, itemData.id, parsed.data.itemCategories.map(data => ({...data, shopId})));
+      const itemCategoriesData = await insertAndSetItemCategories(tx, parsed.data.shopId, itemData.id, parsed.data.itemCategories);
 
       // Set item variant categories and add their options
       await tx.transaction(async tx => {
